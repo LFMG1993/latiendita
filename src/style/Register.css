@@ -1,0 +1,16 @@
+.register-container {
+    background-image: url('../assets/wregister.webp');
+    background-size: cover;
+    background-position: center;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card-image {
+    background-image: url('../assets/lcongelados.webp');
+    background-size: cover;
+    background-position: center;
+    height: 100%;
+}

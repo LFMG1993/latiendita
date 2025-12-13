@@ -1,0 +1,28 @@
+.product-card {
+    border: 1px solid #dee2e6;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    user-select: none; /* Evita que el texto se seleccione al hacer clic rápido */
+}
+
+/* Estilos para las tarjetas que SÍ están disponibles */
+.product-card:not(.disabled) {
+    cursor: pointer;
+}
+
+.product-card:not(.disabled):hover {
+    transform: translateY(-4px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.product-card:not(.disabled):active {
+    transform: translateY(0) scale(0.98);
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+}
+
+/* Estilos para las tarjetas que NO están disponibles */
+.product-card.disabled {
+    cursor: not-allowed;
+    background-color: #f8f9fa; /* Un gris muy claro */
+    border-color: rgba(220, 53, 69, 0.4); /* Borde rojo sutil */
+    color: #6c757d; /* Texto ligeramente atenuado */
+}

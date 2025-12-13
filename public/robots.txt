@@ -1,0 +1,21 @@
+# Permitir a todos los buscadores rastrear el sitio
+User-agent: *
+Allow: /
+
+# No rastrear las secciones internas de la aplicación
+Disallow: /employee-claim
+Disallow: /dashboard
+Disallow: /ingredients-page
+Disallow: /ice-cream-shop
+Disallow: /profile
+Disallow: /products
+Disallow: /purchases
+Disallow: /team-management
+Disallow: /suppliers
+Disallow: /pos
+Disallow: /reports
+Disallow: /cash-session
+Disallow: /settings
+
+# Ubicación del Sitemap
+Sitemap: https://congelados.pages.dev/sitemap.xml
