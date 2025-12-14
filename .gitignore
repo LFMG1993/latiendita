@@ -24,4 +24,11 @@ dist-ssr
 *.sw?
 
 # Environment variables
+.env
 .env.local
+
+# Firebase
+.firebaserc
+
+# Package locks (forcing pnpm)
+package-lock.json

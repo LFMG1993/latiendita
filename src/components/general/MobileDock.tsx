@@ -8,11 +8,13 @@ import {useAuthStore} from "../../store/authStore.ts";
 import {logoutService} from "../../services/logoutService.ts";
 import {Heladeria} from "../../types";
 import ProfileMenuOverlay from "./ProfileMenuOverlay.tsx";
+import {useTenant} from "../../context/TenantContext";
 
 const MobileDock: FC = () => {
     const {hasPermission} = usePermissions();
     const navigate = useNavigate();
     const {user, iceCreamShops, activeIceCreamShopId, setActiveIceCreamShopId} = useAuthStore();
+    const {tenant} = useTenant();
     const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
@@ -43,12 +45,16 @@ const MobileDock: FC = () => {
     return (
         <>
             <nav className="mobile-dock">
-                {firstPrimary.map(item => (
-                    <NavLink key={item.label} to={item.to} className="dock-item">
-                        <item.Icon size={24}/>
-                        <span className="dock-item-label">{item.label}</span>
-                    </NavLink>
-                ))}
+                {firstPrimary.map(item => {
+                    let label = item.label;
+                    if (label === 'Heladerías') label = tenant.terminology.shopLabelPlural;
+                    return (
+                        <NavLink key={item.label} to={item.to} className="dock-item">
+                            <item.Icon size={24}/>
+                            <span className="dock-item-label">{label}</span>
+                        </NavLink>
+                    )
+                })}
 
                 {/* Botón de Perfil Central */}
                 <button className="dock-item" onClick={() => setIsProfileMenuOpen(true)}>
@@ -57,12 +63,16 @@ const MobileDock: FC = () => {
                 </button>
 
                 {/* Siguiente icono primario (Reportes) */}
-                {secondPrimary.map(item => (
-                    <NavLink key={item.label} to={item.to} className="dock-item">
-                        <item.Icon size={24}/>
-                        <span className="dock-item-label">{item.label}</span>
-                    </NavLink>
-                ))}
+                {secondPrimary.map(item => {
+                    let label = item.label;
+                    if (label === 'Heladerías') label = tenant.terminology.shopLabelPlural;
+                    return (
+                        <NavLink key={item.label} to={item.to} className="dock-item">
+                            <item.Icon size={24}/>
+                            <span className="dock-item-label">{label}</span>
+                        </NavLink>
+                    )
+                })}
 
                 {/* Botón para abrir el menú de "Más" */}
                 {secondaryItems.length > 0 && (

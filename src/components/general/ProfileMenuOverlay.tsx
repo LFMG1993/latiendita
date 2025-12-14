@@ -1,7 +1,8 @@
 import {FC} from "react";
 import {Link} from "react-router-dom";
 import {AuthStoreState, Heladeria} from "../../types";
-import {PersonCircle} from "react-bootstrap-icons";
+import {PersonCircle, Moon, Sun} from "react-bootstrap-icons";
+import {useTheme} from "../../context/ThemeContext";
 
 interface ProfileMenuOverlayProps {
     isOpen: boolean;
@@ -16,6 +17,8 @@ interface ProfileMenuOverlayProps {
 const ProfileMenuOverlay: FC<ProfileMenuOverlayProps> = (
     {isOpen, onClose, user, activeHeladeriaName, iceCreamShops, onLogout, onHeladeriaChange}
 ) => {
+    const {theme, toggleTheme} = useTheme();
+
     if (!isOpen) return null;
 
     return (
@@ -54,6 +57,10 @@ const ProfileMenuOverlay: FC<ProfileMenuOverlayProps> = (
                 )}
                 <hr/>
                 <div className="d-grid gap-2">
+                    <button className="btn btn-outline-secondary d-flex align-items-center justify-content-center" onClick={toggleTheme}>
+                        {theme === 'light' ? <Moon className="me-2"/> : <Sun className="me-2"/>}
+                        {theme === 'light' ? 'Activar Modo Oscuro' : 'Activar Modo Claro'}
+                    </button>
                     <Link to="/profile" className="btn btn-outline-secondary" onClick={onClose}>Ir a Mi Perfil</Link>
                     <button className="btn btn-danger" onClick={onLogout}>Cerrar Sesión</button>
                 </div>

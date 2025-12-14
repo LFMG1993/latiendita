@@ -187,11 +187,18 @@ const App: FC = () => {
     );
 }
 
+import {TenantProvider} from "./context/TenantContext";
+import {ThemeProvider} from "./context/ThemeContext";
+
 const AppWrapper: FC = () => {
     // Envolvemos App en el Router para que el hook useNavigate esté disponible
     return (
         <Router>
-            <App/>
+            <ThemeProvider>
+                <TenantProvider>
+                    <App/>
+                </TenantProvider>
+            </ThemeProvider>
         </Router>
     );
 }

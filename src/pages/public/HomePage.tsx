@@ -2,9 +2,12 @@ import {FC, useState, useEffect} from "react";
 import {Link} from "react-router-dom";
 import {CashStack, BoxSeam, GraphUp, ShieldLockFill, GiftFill, PeopleFill} from "react-bootstrap-icons";
 import '../../style/Home.css';
+import {useTenant} from "../../context/TenantContext";
 
 const HomePage: FC = () => {
     const [isScrolled, setIsScrolled] = useState(false);
+    const {tenant} = useTenant();
+    const {terminology, theme} = tenant;
 
     useEffect(() => {
         const handleScroll = () => {
@@ -14,13 +17,19 @@ const HomePage: FC = () => {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
+    // Helper para capitalizar
+    const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
     return (
         <div className="home-page">
             {/* Barra de Navegación */}
             <nav
                 className={`navbar navbar-expand-lg navbar-dark fixed-top ${isScrolled ? 'scrolled' : ''}`}>
                 <div className="container-fluid">
-                    <Link to="/" className="navbar-brand fw-bold fs-4">Congelados</Link>
+                    <Link to="/" className="navbar-brand fw-bold fs-4">
+                        {theme.logoURL ? <img src={theme.logoURL} alt="Logo" height="30" className="d-inline-block align-text-top me-2"/> : null}
+                        {terminology.shopLabel}
+                    </Link>
                     <div>
                         <Link to="/login" className="btn btn-outline-primary me-2 text-white">Iniciar Sesión</Link>
                         <Link to="/register" className="btn btn-primary">Registrarse</Link>
@@ -29,9 +38,10 @@ const HomePage: FC = () => {
             </nav>
 
             {/* Sección de presentación. */}
-            <header className="hero-section text-center text-white d-flex flex-column justify-content-center">
+            <header className="hero-section text-center text-white d-flex flex-column justify-content-center" style={{background: `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), ${theme.primaryColor}`}}> 
+            {/* Nota: Idealmente el background debería ser una imagen o un gradiente configurable */}
                 <div className="container">
-                    <h1 className="display-3 fw-bolder">La Herramienta Definitiva para tu Heladería.</h1>
+                    <h1 className="display-3 fw-bolder">La Herramienta Definitiva para tu {capitalize(terminology.shopLabel)}.</h1>
                     <p className="lead my-4">Optimiza tus ventas, gestiona tu inventario y toma el control de tu
                         negocio con una plataforma diseñada para crecer contigo.</p>
                     <Link to="/register" className="btn btn-light btn-lg mt-3 fw-bold">Empieza Gratis</Link>
@@ -44,7 +54,7 @@ const HomePage: FC = () => {
                 <div className="row g-4">
                     <div className="col-md-4">
                         <div className="card h-100 shadow-sm border-0 p-4 feature-card">
-                            <CashStack size={48} className="text-primary mx-auto mb-3"/>
+                            <CashStack size={48} className="text-primary mx-auto mb-3" style={{color: theme.primaryColor}}/>
                             <h4 className="fw-bold">Punto de Venta Ágil</h4>
                             <p className="text-muted">Registra ventas en segundos, maneja múltiples métodos de pago y
                                 gestiona productos con opciones variables sin esfuerzo.</p>
@@ -52,7 +62,7 @@ const HomePage: FC = () => {
                     </div>
                     <div className="col-md-4">
                         <div className="card h-100 shadow-sm border-0 p-4 feature-card">
-                            <BoxSeam size={48} className="text-primary mx-auto mb-3"/>
+                            <BoxSeam size={48} className="text-primary mx-auto mb-3" style={{color: theme.primaryColor}}/>
                             <h4 className="fw-bold">Inventario Inteligente</h4>
                             <p className="text-muted">Tu stock se descuenta automáticamente con cada venta. Registra
                                 compras y gastos para tener un control total.</p>
@@ -60,22 +70,22 @@ const HomePage: FC = () => {
                     </div>
                     <div className="col-md-4">
                         <div className="card h-100 shadow-sm border-0 p-4 feature-card">
-                            <GraphUp size={48} className="text-primary mx-auto mb-3"/>
+                            <GraphUp size={48} className="text-primary mx-auto mb-3" style={{color: theme.primaryColor}}/>
                             <h4 className="fw-bold">Reportes Claros</h4>
                             <p className="text-muted">Analiza tus ventas por día, semana o mes. Identifica tus
-                                productos estrella y entiende el rendimiento de tu negocio.</p>
+                                {terminology.productLabel.toLowerCase()}s estrella y entiende el rendimiento de tu negocio.</p>
                         </div>
                     </div>
                 </div>
             </section>
             {/* sección de servicios gratis */}
-            <section id="why-free" className="py-5 bg-light">
+            <section id="why-free" className="py-5 bg-body-tertiary">
                 <div className="container text-center">
-                    <GiftFill size={60} className="text-primary mb-3"/>
+                    <GiftFill size={60} className="text-primary mb-3" style={{color: theme.primaryColor}}/>
                     <h2 className="fw-bold">Nuestra Misión es Apoyarte</h2>
                     <p className="lead text-muted mx-auto" style={{maxWidth: '700px'}}>
-                        Creemos que todos los emprendedores merecen acceso a herramientas de calidad. "Congelados" es
-                        nuestro proyecto para apoyar a pequeños negocios como heladerías y fruterías. Ofrecemos las
+                        Creemos que todos los emprendedores merecen acceso a herramientas de calidad. "{terminology.shopLabel}" es
+                        nuestro proyecto para apoyar a pequeños negocios como {terminology.shopLabel.toLowerCase()}s. Ofrecemos las
                         funciones esenciales de forma gratuita para ayudarte a crecer.
                     </p>
                 </div>
@@ -91,8 +101,8 @@ const HomePage: FC = () => {
                             gestionar inventario o simplemente operar la caja.</p>
                     </div>
                     <div className="col-md-6 text-center">
-                        <ShieldLockFill size={80} className="text-primary me-4"/>
-                        <PeopleFill size={80} className="text-primary"/>
+                        <ShieldLockFill size={80} className="text-primary me-4" style={{color: theme.primaryColor}}/>
+                        <PeopleFill size={80} className="text-primary" style={{color: theme.primaryColor}}/>
                     </div>
                 </div>
             </section>
@@ -101,7 +111,7 @@ const HomePage: FC = () => {
             <section className="final-cta py-5 text-center">
                 <div className="container">
                     <h2 className="fw-bold">¿Listo para transformar tu negocio?</h2>
-                    <p>Crea tu cuenta en menos de un minuto y empieza a gestionar tu heladería como un profesional.
+                    <p>Crea tu cuenta en menos de un minuto y empieza a gestionar tu {terminology.shopLabel.toLowerCase()} como un profesional.
                     </p>
                     <Link to="/register" className="btn btn-primary btn-lg mt-3 fw-bold">Crear Mi Cuenta Gratis</Link>
                 </div>
@@ -110,7 +120,7 @@ const HomePage: FC = () => {
             {/* Footer */}
             <footer className="py-4 home-footer">
                 <div className="container text-center text-white small">
-                    <p className="mb-1">&copy; {new Date().getFullYear()} Congelados. Todos los derechos
+                    <p className="mb-1">&copy; {new Date().getFullYear()} {terminology.shopLabel}. Todos los derechos
                         reservados.</p>
                     <p>Diseñado y Desarrollado por <a href="https://molink.com.co/" target="_blank"
                                                       rel="noopener noreferrer"

@@ -19,11 +19,17 @@
 
 .feature-card {
     transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    background-color: var(--bs-card-bg);
+    color: var(--bs-card-color);
 }
 
 .feature-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+[data-bs-theme="dark"] .feature-card:hover {
+     box-shadow: 0 0.5rem 1rem rgba(255, 255, 255, 0.1) !important;
 }
 
 .btn-primary {

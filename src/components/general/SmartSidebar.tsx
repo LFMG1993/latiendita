@@ -5,8 +5,10 @@ import {navItemsConfig} from "../../config/navConfig.ts";
 import {useAuthStore} from "../../store/authStore.ts";
 import {getPendingInvitations} from "../../services/teamServices.ts";
 import {InvitationData, Heladeria} from "../../types";
-import {Envelope, PersonCircle} from "react-bootstrap-icons";
+import {Envelope, PersonCircle, Moon, Sun, List} from "react-bootstrap-icons";
 import {logoutService} from "../../services/logoutService.ts";
+import {useTenant} from "../../context/TenantContext";
+import {useTheme} from "../../context/ThemeContext";
 
 interface SmartSidebarProps {
     isExpanded: boolean;
@@ -17,6 +19,8 @@ const SmartSidebar: FC<SmartSidebarProps> = ({isExpanded, setIsExpanded}) => {
     const {hasPermission} = usePermissions();
     const navigate = useNavigate();
     const {user, iceCreamShops, activeIceCreamShopId, setActiveIceCreamShopId} = useAuthStore();
+    const {tenant} = useTenant();
+    const {theme, toggleTheme} = useTheme();
     const [pendingInvitations, setPendingInvitations] = useState<InvitationData[]>([]);
     const isOwner = user?.role === 'owner';
 
@@ -50,9 +54,21 @@ const SmartSidebar: FC<SmartSidebarProps> = ({isExpanded, setIsExpanded}) => {
             id="sidebarMenu"
             onMouseEnter={() => setIsExpanded(true)}
             onMouseLeave={() => setIsExpanded(false)}
-            className={`smart-sidebar d-md-block bg-light sidebar d-flex flex-column ${isExpanded ? 'sidebar-expanded' : ''}`}
+            className={`smart-sidebar d-md-block sidebar d-flex flex-column ${isExpanded ? 'sidebar-expanded' : ''}`}
         >
-            <div className="flex-grow-1 overflow-auto pt-3">
+            <div className="d-flex align-items-center justify-content-center py-3 border-bottom border-secondary-subtle">
+                <button 
+                    className="btn btn-link text-secondary p-0 border-0" 
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    title={isExpanded ? "Colapsar menú" : "Expandir menú"}
+                >
+                    <List size={28} />
+                </button>
+                 <span className={`sidebar-text fw-bold ms-2 ${isExpanded ? 'opacity-100' : 'opacity-0'}`} style={{transition: 'opacity 0.2s'}}>
+                    Menú
+                </span>
+            </div>
+            <div className="flex-grow-1 overflow-auto pt-2">
                 <ul className="nav flex-column mb-auto">
                     {navItemsConfig
                         .filter(item => item.permissionId ? hasPermission(item.permissionId) : true)
@@ -60,11 +76,16 @@ const SmartSidebar: FC<SmartSidebarProps> = ({isExpanded, setIsExpanded}) => {
                             const isTeamManagement = item.to === '/team-management';
                             const showBadge = isTeamManagement && isOwner && pendingInvitations.length > 0;
 
+                            let label = item.label;
+                            if (label === 'Heladerías') {
+                                label = tenant.terminology.shopLabelPlural;
+                            }
+
                             return (
                                 <li className="nav-item" key={item.label}>
                                     <NavLink className="nav-link position-relative" to={item.to}>
                                         <item.Icon className="sidebar-icon" size={24}/>
-                                        <span className="sidebar-text">{item.label}</span>
+                                        <span className="sidebar-text">{label}</span>
                                         {showBadge && (
                                             <span
                                                 className="badge rounded-pill bg-danger position-absolute top-50 translate-middle-y"
@@ -79,7 +100,26 @@ const SmartSidebar: FC<SmartSidebarProps> = ({isExpanded, setIsExpanded}) => {
                                     </NavLink>
                                 </li>
                             );
+
                         })}
+                    
+                    {/* Dark Mode Toggle */}
+                    <li className="nav-item mt-auto">
+                        <button 
+                            className="nav-link w-100 text-start border-0 bg-transparent" 
+                            onClick={toggleTheme}
+                            style={{ cursor: 'pointer' }}
+                        >
+                            {theme === 'light' ? (
+                                <Moon className="sidebar-icon" size={24}/>
+                            ) : (
+                                <Sun className="sidebar-icon" size={24}/>
+                            )}
+                            <span className="sidebar-text">
+                                {theme === 'light' ? 'Modo Oscuro' : 'Modo Claro'}
+                            </span>
+                        </button>
+                    </li>
                 </ul>
             </div>
             {/* Menú de usuario y heladería en la parte inferior */}

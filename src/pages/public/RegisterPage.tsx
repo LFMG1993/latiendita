@@ -60,7 +60,7 @@ const RegisterPage: FC = () => {
                     <div className="col-lg-6">
                         <div className="card-body p-5">
                             <div className="text-center mb-4">
-                                <h1 className="h4 text-gray-900">Crea tu Cuenta</h1>
+                                <h1 className="h4 text-body mb-0">Crea tu Cuenta</h1>
                             </div>
                             {success && (
                                 <Alert type="success"

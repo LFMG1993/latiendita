@@ -30,7 +30,7 @@ const LoginPage: FC = () => {
 
     return (
         <div className="login-container">
-            <div className="card shadow-lg" style={{maxWidth: '800px', width: '100%', border: 'none'}}>
+            <div className="card shadow-lg" style={{maxWidth: '800px', width: '100%'}}>
                 <div className="row g-0">
                     <div className="col-md-6 d-none d-md-block login-card-image">
                     </div>

@@ -1,299 +1,381 @@
 :root {
-    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-    line-height: 1.5;
-    font-weight: 400;
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
 
-    color-scheme: light white;
-    color: rgba(255, 255, 255, 0.87);
-    background-color: #FFFFFF;
+  /* Use Bootstrap variables or defaults that adapt */
+  color: var(--bs-body-color);
+  background-color: var(--bs-body-bg);
 
-    font-synthesis: none;
-    text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+  /* Global transition for theme changes */
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Apply transition to all elements that might change */
+body, .card, .navbar, .smart-sidebar, .mobile-dock, .dropdown-menu, .form-control, .btn {
+     transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .bd-placeholder-img {
-    font-size: 1.125rem;
-    text-anchor: middle;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    user-select: none;
+  font-size: 1.125rem;
+  text-anchor: middle;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
 }
 
 @media (min-width: 768px) {
-    .bd-placeholder-img-lg {
-        font-size: 3.5rem;
-    }
+  .bd-placeholder-img-lg {
+    font-size: 3.5rem;
+  }
 }
 
 /* --- Estilos para el Smart Sidebar --- */
 .smart-sidebar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 80px; /* Ancho colapsado */
-    height: 100%;
-    transition: width 0.3s ease-in-out;
-    z-index: 100;
-    background-color: #f8f9fa; /* Aseguramos que tenga fondo visible */
-    box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 80px; /* Ancho colapsado */
+  height: 100%;
+  transition: width 0.3s ease-in-out;
+  z-index: 100;
+  background-color: #f8f9fa; /* Aseguramos que tenga fondo visible */
+  box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.1);
 }
 
 .smart-sidebar.sidebar-expanded {
-    width: 240px; /* Ancho expandido */
+  width: 240px; /* Ancho expandido */
 }
 
 .smart-sidebar .nav-link {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.75rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 0;
 }
 
 /* ESTILO PARA CUANDO EL SIDEBAR ESTÁ EXPANDIDO */
 .smart-sidebar.sidebar-expanded .nav-link {
-    justify-content: flex-start; /* Alinea el contenido (ícono + texto) a la izquierda */
-    padding-left: 1.75rem; /* Añade un padding izquierdo para indentar el contenido */
+  justify-content: flex-start; /* Alinea el contenido (ícono + texto) a la izquierda */
+  padding-left: 1.75rem; /* Añade un padding izquierdo para indentar el contenido */
 }
 
 .smart-sidebar .sidebar-icon {
-    min-width: 24px; /* Asegura que el icono siempre tenga espacio */
-    flex-shrink: 0;
+  min-width: 24px; /* Asegura que el icono siempre tenga espacio */
+  flex-shrink: 0;
 }
 
 /* Forzar un solo color para todo el sidebar */
 .smart-sidebar .sidebar-icon {
-    color: var(--bs-link-color);
+  color: var(--bs-link-color);
 }
 
 .smart-sidebar .sidebar-text {
-    opacity: 0;
-    white-space: nowrap;
-    width: 0;
-    overflow: hidden;
-    transition: opacity 0.2s ease-in-out, width 0.2s ease-in-out;
+  opacity: 0;
+  white-space: nowrap;
+  width: 0;
+  overflow: hidden;
+  transition: opacity 0.2s ease-in-out, width 0.2s ease-in-out;
 }
 
 .smart-sidebar.sidebar-expanded .sidebar-text {
-    opacity: 1;
-    width: auto;
-    margin-left: 1rem; /* Espacio entre el icono y el texto */
+  opacity: 1;
+  width: auto;
+  margin-left: 1rem; /* Espacio entre el icono y el texto */
 }
 
 .smart-sidebar .sidebar-footer {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    border-top: 1px solid #dee2e6;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  border-top: 1px solid #dee2e6;
 }
 
 /* Añadimos padding al contenedor de la lista para que el último item no quede oculto por el footer */
 .smart-sidebar .flex-grow-1 {
-    /* La altura del footer es aprox 65px, damos un poco más de espacio */
-    padding-bottom: 75px;
+  /* La altura del footer es aprox 65px, damos un poco más de espacio */
+  padding-bottom: 75px;
 }
 
-
 .smart-sidebar .sidebar-toggle-wrapper {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    border-top: 1px solid #dee2e6; /* Borde superior para separar */
-    padding: 0.5rem;
-    background-color: #f8f9fa; /* Mismo color que el sidebar */
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  border-top: 1px solid #dee2e6; /* Borde superior para separar */
+  padding: 0.5rem;
+  background-color: #f8f9fa; /* Mismo color que el sidebar */
 }
 
 /*l contenido principal ahora se ajusta al sidebar */
 .main-content {
-    padding: 1.5rem;
-    transition: margin-left 0.3s ease-in-out;
+  padding: 1.5rem;
+  transition: margin-left 0.3s ease-in-out;
 }
 
 .content-collapsed {
-    margin-left: 80px;
+  margin-left: 80px;
 }
 
 .content-expanded {
-    margin-left: 240px;
+  margin-left: 240px;
 }
 
 /* Estilos para la flecha colapsable */
 .collapse-arrow {
-    transition: transform 0.3s ease;
+  transition: transform 0.3s ease;
 }
 
 /* El selector apunta al enlace (que tiene aria-expanded) y busca el ícono dentro */
 a[aria-expanded="true"] .collapse-arrow {
-    transform: rotate(180deg);
+  transform: rotate(180deg);
 }
 
 /* Estilos para el enlace de crédito de Molink Tecnología*/
 .molink-credit-link {
-    color: #6c757d; /* Color base para fondos claros (como en LoginPage) */
-    text-decoration: underline;
-    transition: color 0.2s ease-in-out;
+  color: #6c757d; /* Color base para fondos claros (como en LoginPage) */
+  text-decoration: underline;
+  transition: color 0.2s ease-in-out;
 }
 
 .molink-credit-link:hover {
-    color: #9f0712 !important;
+  color: #9f0712 !important;
 }
 
 /* --- Estilos para el footer en la página de inicio --- */
 .home-footer {
-    background-color: rgba(29, 31, 34, 0.85); /* Un negro sutil y semi-transparente */
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px); /* Para compatibilidad con Safari */
+  background-color: rgba(
+    29,
+    31,
+    34,
+    0.85
+  ); /* Un negro sutil y semi-transparente */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px); /* Para compatibilidad con Safari */
 }
 
 /* Anulamos el color del enlace específicamente dentro del nuevo footer para asegurar la legibilidad */
 .home-footer .molink-credit-link {
-    color: #adb5bd; /* Un gris más claro para que sea legible en el fondo oscuro */
+  color: #adb5bd; /* Un gris más claro para que sea legible en el fondo oscuro */
 }
 
 /* --- ESTILOS PARA LA NAVEGACIÓN MÓVIL --- */
 
 .mobile-dock {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 65px;
-    background-color: #f8f9fa;
-    border-top: 1px solid #dee2e6;
-    display: flex;
-    justify-content: space-around;
-    align-items: flex-start;
-    padding-top: 8px;
-    z-index: 1030; /* Por encima de otros elementos */
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 65px;
+  background-color: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-start;
+  padding-top: 8px;
+  z-index: 1030; /* Por encima de otros elementos */
 }
 
 @media (min-width: 768px) {
-    .mobile-dock {
-        display: none; /* Ocultamos el dock en pantallas de escritorio */
-    }
+  .mobile-dock {
+    display: none; /* Ocultamos el dock en pantallas de escritorio */
+  }
 
-    .main-content {
-        /* En escritorio, el contenido no necesita espacio extra abajo */
-        padding-bottom: 1.5rem;
-    }
+  .main-content {
+    /* En escritorio, el contenido no necesita espacio extra abajo */
+    padding-bottom: 1.5rem;
+  }
 }
 
 @media (max-width: 767.98px) {
-    .main-content {
-        margin-left: 0 !important; /* En móvil, el contenido ocupa todo el ancho */
-        /* Dejamos espacio abajo para que el último elemento no quede oculto por el dock */
-        padding-bottom: 80px;
-    }
+  .main-content {
+    margin-left: 0 !important; /* En móvil, el contenido ocupa todo el ancho */
+    /* Dejamos espacio abajo para que el último elemento no quede oculto por el dock */
+    padding-bottom: 80px;
+  }
 }
 
 .dock-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    color: #6c757d; /* Color gris para items inactivos */
-    background: none;
-    border: none;
-    font-size: 10px;
-    flex-grow: 1;
-    transition: color 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: #6c757d; /* Color gris para items inactivos */
+  background: none;
+  border: none;
+  font-size: 10px;
+  flex-grow: 1;
+  transition: color 0.2s ease;
 }
 
 .dock-item.active {
-    color: var(--bs-primary); /* Color primario de Bootstrap para el item activo */
+  color: var(
+    --bs-primary
+  ); /* Color primario de Bootstrap para el item activo */
 }
 
 .dock-item-label {
-    margin-top: 2px;
+  margin-top: 2px;
 }
 
 /* --- Estilos para el Menú "Más" Deslizable --- */
 
 .mobile-menu-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 1040;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1040;
 }
 
 .mobile-menu-panel {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #fff;
-    border-top-left-radius: 16px;
-    border-top-right-radius: 16px;
-    padding: 20px;
-    padding-bottom: calc(65px + 20px); /* Espacio para el dock de abajo */
-    z-index: 1041;
-    animation: slide-up 0.3s ease-out;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #fff;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  padding: 20px;
+  padding-bottom: calc(65px + 20px); /* Espacio para el dock de abajo */
+  z-index: 1041;
+  animation: slide-up 0.3s ease-out;
 }
 
 .mobile-menu-handle {
-    width: 40px;
-    height: 4px;
-    background-color: #dee2e6;
-    border-radius: 2px;
-    margin: -10px auto 20px;
-    border: none;
+  width: 40px;
+  height: 4px;
+  background-color: #dee2e6;
+  border-radius: 2px;
+  margin: -10px auto 20px;
+  border: none;
 }
 
 .mobile-menu-profile-header {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
 .mobile-menu-profile-info {
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
 }
 
 .mobile-menu-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-    gap: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 16px;
 }
 
 .mobile-menu-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-decoration: none;
-    color: #212529;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  color: #212529;
 }
 
 .mobile-menu-icon-wrapper {
-    width: 50px;
-    height: 50px;
-    border-radius: 12px;
-    background-color: #f1f3f5;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 8px;
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  background-color: #f1f3f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
 }
 
 .mobile-menu-label {
-    font-size: 12px;
-    text-align: center;
+  font-size: 12px;
+  text-align: center;
 }
 
+/* ... existing styles ... */
+
+/* --- Adapting Sidebar and Mobile Dock for Dark Mode --- */
+[data-bs-theme="dark"] .smart-sidebar {
+  background-color: #212529; /* Dark background */
+  border-right: 1px solid #495057; /* Restore border visibility */
+  color: #dee2e6;
+}
+
+[data-bs-theme="dark"] .smart-sidebar .nav-link {
+    color: #dee2e6;
+}
+
+[data-bs-theme="dark"] .smart-sidebar .nav-link:hover {
+    color: #fff;
+    background-color: rgba(255,255,255,0.1);
+}
+
+[data-bs-theme="dark"] .smart-sidebar .nav-link.active {
+    color: var(--bs-primary);
+    background-color: rgba(var(--bs-primary-rgb), 0.1);
+}
+
+[data-bs-theme="dark"] .smart-sidebar .sidebar-footer,
+[data-bs-theme="dark"] .smart-sidebar .sidebar-toggle-wrapper {
+  background-color: #212529;
+  border-top-color: #495057;
+}
+
+[data-bs-theme="dark"] .mobile-dock {
+  background-color: #212529;
+  border-top-color: #495057;
+}
+
+[data-bs-theme="dark"] .dock-item {
+  color: #adb5bd;
+}
+
+[data-bs-theme="dark"] .dock-item.active {
+  color: var(--bs-primary);
+}
+
+[data-bs-theme="dark"] .mobile-menu-panel {
+  background-color: #212529;
+  color: #f8f9fa;
+}
+
+[data-bs-theme="dark"] .mobile-menu-handle {
+  background-color: #495057;
+}
+
+[data-bs-theme="dark"] .mobile-menu-icon-wrapper {
+  background-color: #343a40;
+}
+
+[data-bs-theme="dark"] .mobile-menu-item {
+  color: #f8f9fa;
+}
+
+[data-bs-theme="dark"] .mobile-menu-profile-info small {
+  color: #adb5bd !important;
+}
+
+[data-bs-theme="dark"] .nav-link.text-secondary {
+  color: #adb5bd !important; /* Ensure toggle icons are visible */
+}
+
+/* --- Animation --- */
 @keyframes slide-up {
-    from {
-        transform: translateY(100%);
-    }
-    to {
-        transform: translateY(0);
-    }
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
 }

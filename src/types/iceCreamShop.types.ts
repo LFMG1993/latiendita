@@ -36,6 +36,16 @@ export interface Heladeria {
     timezone: string;
     members: Record<string, ShopMember>; // Mapa de UID a perfil del miembro
     createdAt: Timestamp;
+    // Multi-tenancy & Branding
+    theme?: {
+        primaryColor?: string;
+        secondaryColor?: string;
+        logoURL?: string; // URL específica para el logo del header/sidebar
+    };
+    terminology?: {
+        shopLabel: string; // Ej: "Heladería", "Frutería"
+        productLabel: string; // Ej: "Helado", "Producto"
+    };
 }
 
 // Tipo para crear una nueva heladería
