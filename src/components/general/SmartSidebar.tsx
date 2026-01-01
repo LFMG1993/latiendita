@@ -5,7 +5,7 @@ import {navItemsConfig} from "../../config/navConfig.ts";
 import {useAuthStore} from "../../store/authStore.ts";
 import {getPendingInvitations} from "../../services/teamServices.ts";
 import {InvitationData, Heladeria} from "../../types";
-import {Envelope, PersonCircle, Moon, Sun, List} from "react-bootstrap-icons";
+import {Envelope, PersonCircle, Moon, Sun, List, Shop} from "react-bootstrap-icons";
 import {logoutService} from "../../services/logoutService.ts";
 import {useTenant} from "../../context/TenantContext";
 import {useTheme} from "../../context/ThemeContext";
@@ -102,6 +102,21 @@ const SmartSidebar: FC<SmartSidebarProps> = ({isExpanded, setIsExpanded}) => {
                             );
 
                         })}
+
+                    {/* Acceso directo a Mi Menú Público (Solo si hay tienda activa) */}
+                    {activeIceCreamShopId && (
+                         <li className="nav-item">
+                             <a 
+                                 href={`/catalogo?shopId=${activeIceCreamShopId}`} 
+                                 target="_blank" 
+                                 rel="noopener noreferrer"
+                                 className="nav-link position-relative"
+                             >
+                                 <Shop className="sidebar-icon" size={24}/>
+                                 <span className="sidebar-text">Ver Mi Menú</span>
+                             </a>
+                         </li>
+                    )}
                     
                     {/* Dark Mode Toggle */}
                     <li className="nav-item mt-auto">

@@ -3,8 +3,14 @@ import {BrowserRouter as Router, Routes, Route, useNavigate} from "react-router-
 import {useRegisterSW} from 'virtual:pwa-register/react';
 import HomePage from "./pages/public/HomePage.tsx";
 import RegisterPage from "./pages/public/RegisterPage.tsx";
+import ProductShowcasePage from "./pages/public/ProductShowcasePage.tsx";
 import {Timestamp} from "firebase/firestore";
 import LoginPage from "./pages/public/LoginPage.tsx";
+import ClientLoginPage from "./pages/public/ClientLoginPage.tsx";
+import ClientRegisterPage from "./pages/public/ClientRegisterPage.tsx";
+import ClientDashboardPage from "./pages/public/ClientDashboardPage.tsx";
+import AdminOrdersPage from "./pages/admin/AdminOrdersPage.tsx";
+import AdminClientsPage from "./pages/admin/AdminClientsPage.tsx";
 import DashboardPage from "./pages/admin/DashboardPage.tsx";
 import IngredientsPage from "./pages/admin/IngredientsPage.tsx";
 import {auth} from './firebase';
@@ -54,13 +60,19 @@ const App: FC = () => {
             if (currentUser) {
                 try {
                     const profileData = await getUserProfileData(currentUser.uid);
+                    
+                    if (!profileData) {
+                        console.warn(`Perfil no encontrado para el usuario ${currentUser.uid}, podría estar en proceso de registro.`);
+                    }
+
                     let heladerias: Heladeria[] = [];
                     try {
-                        // Esta llamada fallará para un usuario no aprobado.
-                        heladerias = await getHeladeriasByUserId(currentUser.uid);
+                        // Solo buscamos heladerías por membresía para dueños/empleados.
+                        if (profileData && profileData.role !== 'client') {
+                            heladerias = await getHeladeriasByUserId(currentUser.uid);
+                        }
                     } catch (error) {
-                        // Capturamos el error de permisos esperado y continuamos.
-                        console.warn("No se pudieron obtener las heladerías, el usuario podría estar pendiente de aprobación:", error);
+                        console.warn("No se pudieron obtener las heladerías:", error);
                     }
 
                     let userPermissions: string[] = [];
@@ -92,7 +104,9 @@ const App: FC = () => {
                         phone: profileData?.phone ?? '',
                         photoURL: profileData?.photoURL ?? currentUser.photoURL,
                         createdAt: profileData?.createdAt ?? Timestamp.fromDate(new Date(currentUser.metadata.creationTime!)),
-                        iceCreamShopIds: heladerias.map(h => h.id),
+                        iceCreamShopIds: profileData?.role === 'client' 
+                            ? (profileData.iceCreamShopIds || []) 
+                            : heladerias.map(h => h.id),
                         permissions: userPermissions,
                     };
 
@@ -100,7 +114,7 @@ const App: FC = () => {
                     setUserIceCreamShop(heladerias);
 
                 } catch (error) {
-                    console.error("Error al cargar datos del usuario:", error);
+                    console.error("Error crítico loading data:", error);
                     setAuthUser(null);
                     setUserIceCreamShop([]);
                 } finally {
@@ -140,10 +154,20 @@ const App: FC = () => {
                 <Route path="/register" element={<RegisterPage/>}/>
                 <Route path="/login" element={<LoginPage/>}/>
                 <Route path="/employee-claim" element={<EmployeeClaim/>}/>
+                <Route path="/catalogo" element={<ProductShowcasePage/>}/>
+                <Route path="/client-login" element={<ClientLoginPage/>}/>
+                <Route path="/client-register" element={<ClientRegisterPage/>}/>
+                <Route path="/client/dashboard" element={<ProtectedRoute><ClientDashboardPage/></ProtectedRoute>}/>
                 {/* Rutas protegidas */}
                 <Route path="/dashboard"
                        element={<ProtectedRoute
                            requiredPermission="shop_details_manage"><MainLayout><DashboardPage/></MainLayout></ProtectedRoute>}/>
+                <Route path="/orders"
+                       element={<ProtectedRoute
+                           requiredPermission="pos_access"><MainLayout><AdminOrdersPage/></MainLayout></ProtectedRoute>}/>
+                <Route path="/clients"
+                       element={<ProtectedRoute
+                           requiredPermission="pos_access"><MainLayout><AdminClientsPage/></MainLayout></ProtectedRoute>}/>
                 <Route path="/ingredients-page"
                        element={<ProtectedRoute
                            requiredPermission="ingredients_view"><MainLayout><IngredientsPage/></MainLayout></ProtectedRoute>}/>

@@ -76,3 +76,59 @@ export const registerUser = async (formData: RegisterFormData): Promise<User> =>
         throw new Error('Ocurrió un error inesperado al registrar el usuario.');
     }
 };
+
+export interface ClientRegisterData {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    phone: string;
+    shopId?: string; // Tienda desde la que se registra
+}
+
+/**
+ * Registra un nuevo CLIENTE (comprador final) en Firebase Auth y Firestore.
+ * NO crea heladería. Asigna rol 'client'.
+ */
+export const registerClient = async (formData: ClientRegisterData): Promise<User> => {
+    let user: User | null = null;
+    try {
+        // 1. Crear Auth User
+        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+        user = userCredential.user;
+
+        // 2. Crear documento de usuario en Firestore
+        const userRef = doc(db, "users", user.uid);
+        const userDocData = {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            role: 'client', // Rol específico para clientes
+            phone: formData.phone,
+            createdAt: serverTimestamp(),
+            iceCreamShopIds: formData.shopId ? [formData.shopId] : [] // Asociamos tienda inicial si existe
+        };
+        
+        await writeBatch(db).set(userRef, userDocData).commit();
+
+        // 3. Update Auth Profile
+        await updateProfile(user, {
+            displayName: `${formData.firstName} ${formData.lastName}`.trim()
+        });
+
+        return user;
+    } catch (err) {
+        if (user) {
+            await deleteUser(user);
+             console.log('Usuario de Auth revertido (Client) debido a un fallo en la creación de documentos.');
+        }
+        console.error("Error registrando cliente: ", err);
+        const error = err as { code?: string };
+
+        if (error.code === 'auth/email-already-in-use') throw new Error('Este correo electrónico ya está registrado.');
+        if (error.code === 'auth/weak-password') throw new Error('La contraseña debe tener al menos 6 caracteres.');
+        if (error.code === 'auth/invalid-email') throw new Error('El formato del correo electrónico no es válido.');
+        
+        throw new Error('Ocurrió un error inesperado al registrar el cliente.');
+    }
+};

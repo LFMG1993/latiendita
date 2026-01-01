@@ -15,6 +15,8 @@ import {
 } from "../../types";
 import {getProducts} from "../../services/productServices.ts";
 import {getIngredients} from "../../services/ingredientServices.ts";
+import {getAllClients} from "../../services/userServices.ts";
+import {UserProfile} from "../../types/user.types";
 import ProductGrid from "../../components/pos/ProductGrid.tsx";
 import PromotionGrid from "../../components/pos/PromotionGrid.tsx";
 import OrderSummary from "../../components/pos/OrderSummary.tsx";
@@ -33,6 +35,7 @@ const PointOfSalePage: FC = () => {
     const [pageLoading, setPageLoading] = useState(true);
     const [products, setProducts] = useState<Product[]>([]);
     const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+    const [clients, setClients] = useState<UserProfile[]>([]);
     const [promotions, setPromotions] = useState<Promotion[]>([]);
     const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
     const [openSession, setOpenSession] = useState<CashSession | null>(null);
@@ -41,6 +44,8 @@ const PointOfSalePage: FC = () => {
     // --- Estado del Pedido Actual ---
     const [pendingOrders, setPendingOrders] = usePersistentState<Record<string, SaleItem[]>>('pos_pending_orders', {});
     const [activeOrderId, setActiveOrderId] = usePersistentState<string | null>('pos_active_order_id', null);
+    
+    const [selectedClientId, setSelectedClientId] = useState<string>('');
     const [productForVariableSelection, setProductForVariableSelection] = useState<Product | null>(null);
     const [variableSelectionsNeeded, setVariableSelectionsNeeded] = useState<IngredientUsage[]>([]);
     const [madeVariableSelections, setMadeVariableSelections] = useState<IngredientUsage[]>([]);
@@ -80,18 +85,20 @@ const PointOfSalePage: FC = () => {
             setPageLoading(true);
             try {
                 const today = new Date().getDay();
-                const [productsData, ingredientsData, paymentMethodsData, sessionData, promotionsData] = await Promise.all([
+                const [productsData, ingredientsData, paymentMethodsData, sessionData, promotionsData, clientsData] = await Promise.all([
                     getProducts(heladeriaId),
                     getIngredients(heladeriaId),
                     getActivePaymentMethods(heladeriaId),
                     getOpenCashSession(heladeriaId),
                     getActivePromotionsForToday(heladeriaId, today),
+                    getAllClients()
                 ]);
                 setProducts(productsData);
                 setIngredients(ingredientsData);
                 setPaymentMethods(paymentMethodsData);
                 setOpenSession(sessionData);
                 setPromotions(promotionsData);
+                setClients(clientsData);
             } catch (err) {
                 console.error("Error al cargar datos para el POS:", err);
                 setError("No se pudieron cargar los productos o ingredientes.");
@@ -286,24 +293,31 @@ const PointOfSalePage: FC = () => {
         setPendingOrders(prev => ({...prev, [activeOrderId]: updatedOrder}));
     };
 
-    const handleProcessPayment = async (payments: SalePayment[]) => {
+    const handleProcessPayment = async (payments: SalePayment[], clientId?: string, clientName?: string) => {
         if (!heladeriaId || !user || !activeOrderId || !openSession || currentOrder.length === 0) return;
+
+        const total = currentOrder.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+        const creditPayment = payments.find(p => p.type === 'credit');
+        const pendingDebt = creditPayment ? creditPayment.amount : 0;
 
         const saleData: NewSaleData = {
             items: currentOrder,
             sessionId: openSession.id,
             payments,
-            total: currentOrder.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0),
+            total,
             employeeId: user.uid,
             employeeName: user.firstName || user.email,
+            clientId: pendingDebt > 0 ? clientId : undefined,
+            clientName: pendingDebt > 0 ? clientName : undefined,
+            pendingDebt: pendingDebt > 0 ? pendingDebt : undefined
         };
 
         try {
             await registerSale(heladeriaId, saleData);
             alert('¡Venta registrada con éxito!');
-            // Limpiamos solo el pedido finalizado
             handleCloseOrder(activeOrderId);
             setIsPaymentModalOpen(false);
+            setSelectedClientId(''); // Limpiar selección de cliente
         } catch (err) {
             console.error("Error al registrar la venta:", err);
             alert('Ocurrió un error al registrar la venta.');
@@ -447,6 +461,9 @@ const PointOfSalePage: FC = () => {
                     onClose={() => setIsPaymentModalOpen(false)}
                     orderTotal={currentOrder.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0)}
                     paymentMethods={paymentMethods}
+                    clients={clients}
+                    selectedClientId={selectedClientId}
+                    onSelectClient={setSelectedClientId}
                     onConfirmPayment={handleProcessPayment}
                 />
             </div>

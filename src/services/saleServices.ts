@@ -32,13 +32,21 @@ export const registerSale = async (heladeriaId: string, saleData: NewSaleData): 
     saleData.items.forEach(item => {
         item.ingredientsUsed.forEach(usage => {
             const ingredientRef = doc(db, "iceCreamShops", heladeriaId, "ingredientes", usage.ingredientId);
-            // Descontamos el stock. La cantidad se multiplica por la cantidad de productos vendidos.
             const totalQuantityToDecrement = usage.quantity * item.quantity;
             batch.update(ingredientRef, {stock: increment(-totalQuantityToDecrement)});
         });
     });
 
-    // 3. Ejecutar todas las operaciones del batch
+    // 3. Si hay deuda pendiente y un cliente identificado, sumar a su cuenta
+    if (saleData.clientId && saleData.pendingDebt && saleData.pendingDebt > 0) {
+        const userRef = doc(db, "users", saleData.clientId);
+        batch.update(userRef, {
+            debt: increment(saleData.pendingDebt),
+            updatedAt: serverTimestamp()
+        });
+    }
+
+    // 4. Ejecutar todas las operaciones del batch
     await batch.commit();
 };
 

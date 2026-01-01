@@ -27,7 +27,7 @@ export interface SalePayment {
     methodId: string;
     methodName: string;
     amount: number;
-    type: 'cash' | 'electronic';
+    type: 'cash' | 'electronic' | 'credit';
 }
 
 export interface Sale {
@@ -39,6 +39,11 @@ export interface Sale {
     createdAt: Timestamp;
     employeeId: string; // UID del empleado que hizo la venta
     employeeName: string; // Nombre de normalizado para fácil visualización
+    
+    // Vínculo con cliente (para sistema de créditos)
+    clientId?: string;
+    clientName?: string;
+    pendingDebt?: number; 
 }
 
 // Tipo para los datos al crear una nueva venta.

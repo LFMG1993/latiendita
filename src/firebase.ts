@@ -1,7 +1,7 @@
 import {initializeApp} from "firebase/app";
 import {getAuth, setPersistence, browserSessionPersistence} from "firebase/auth";
 import {initializeAppCheck, ReCaptchaV3Provider} from "firebase/app-check";
-import {initializeFirestore, persistentLocalCache} from "firebase/firestore";
+import {initializeFirestore, persistentLocalCache, persistentMultipleTabManager} from "firebase/firestore";
 import {getFunctions} from "firebase/functions";
 
 const firebaseConfig = {
@@ -17,7 +17,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = initializeFirestore(app, {
-    localCache: persistentLocalCache(/*{ tabManager: persistentTabManager() }*/)
+    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
 });
 const functions = getFunctions(app, "us-central1");
 

@@ -24,8 +24,8 @@ const defaultTenantConfig: TenantConfig = {
         secondaryColor: '#6c757d',
     },
     terminology: {
-        shopLabel: 'Congelados',
-        shopLabelPlural: 'Congelados', // Default fallback
+        shopLabel: 'Mi Tienda',
+        shopLabelPlural: 'Tiendas', // Default fallback
         productLabel: 'Producto',
     },
 };
@@ -67,7 +67,7 @@ export const TenantProvider: FC<PropsWithChildren> = ({children}) => {
         if (activeIceCreamShop?.name) {
             document.title = `${activeIceCreamShop.name} - Gestión`;
         } else {
-            document.title = "Congelados - Gestión de Heladerías";
+            document.title = "Mi Tienda - Gestión";
         }
     }, [activeIceCreamShop]);
     

@@ -13,7 +13,8 @@ import {
     Gear,
     Megaphone,
     HouseDoor,
-    Receipt
+    Receipt,
+    People
 } from 'react-bootstrap-icons';
 
 export interface NavItemConfig {
@@ -26,6 +27,8 @@ export interface NavItemConfig {
 
 export const navItemsConfig: NavItemConfig[] = [
     {to: "/dashboard", Icon: HouseDoor, label: "DashboardPage", isMobilePrimary: true},
+    {to: "/orders", Icon: Receipt, label: "Pedidos Online", permissionId: 'pos_access', isMobilePrimary: true},
+    {to: "/clients", Icon: People, label: "Clientes y Créditos", permissionId: 'pos_access'},
     {to: "/pos", Icon: Cart3, label: "Punto de Venta", permissionId: 'pos_access', isMobilePrimary: true},
     {to: "/cash-session", Icon: CashCoin, label: "Caja", permissionId: 'cash_session_access'},
     {to: "/ice-cream-shop", Icon: Shop, label: "Heladerías", permissionId: 'shop_details_manage'},

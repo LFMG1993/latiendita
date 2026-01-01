@@ -188,3 +188,40 @@ export const deleteHeladeria = async (userId: string, heladeriaId: string): Prom
 
     await batch.commit();
 };
+
+/**
+ * Obtiene todos los usuarios con el rol 'client'.
+ */
+export const getAllClients = async (): Promise<UserProfile[]> => {
+    try {
+        const usersRef = collection(db, "users");
+        const q = query(usersRef, where("role", "==", "client"));
+        const querySnapshot = await getDocs(q);
+        
+        return querySnapshot.docs.map(doc => ({
+            uid: doc.id,
+            ...doc.data()
+        })) as UserProfile[];
+    } catch (error) {
+        console.error("Error fetching clients:", error);
+        throw new Error("No se pudieron cargar los clientes.");
+    }
+};
+
+/**
+ * Actualiza los saldos (créditos y deuda) y el estado de habilitación de crédito de un cliente.
+ */
+export const updateClientFinancials = async (clientId: string, credits: number, debt: number, isCreditEnabled: boolean): Promise<void> => {
+    try {
+        const userDocRef = doc(db, "users", clientId);
+        await updateDoc(userDocRef, {
+            credits,
+            debt,
+            isCreditEnabled,
+            updatedAt: serverTimestamp()
+        });
+    } catch (error) {
+        console.error("Error updating client financials:", error);
+        throw new Error("No se pudo actualizar el saldo del cliente.");
+    }
+};

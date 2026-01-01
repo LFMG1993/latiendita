@@ -21,6 +21,15 @@ body, .card, .navbar, .smart-sidebar, .mobile-dock, .dropdown-menu, .form-contro
      transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+}
+
 .bd-placeholder-img {
   font-size: 1.125rem;
   text-anchor: middle;
