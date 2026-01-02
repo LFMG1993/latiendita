@@ -1,10 +1,9 @@
-import {useState, FC, ChangeEvent, FormEvent} from "react";
+import {useState, FC, ChangeEvent, FormEvent, useEffect} from "react";
 import {Link, useNavigate} from "react-router-dom";
 import {registerUser} from "../../services/authServices.ts";
 import "../../style/Register.css";
 import Alert from "../../components/general/Alert.tsx";
 import {RegisterFormData} from "../../types";
-import {timezones} from "../../data/timezones.ts";
 
 const RegisterPage: FC = () => {
     const [formData, setFormData] = useState<RegisterFormData>({
@@ -24,7 +23,17 @@ const RegisterPage: FC = () => {
     const [loading, setLoading] = useState(false); // Estado para el spinner
     const [showPassword, setShowPassword] = useState(false); // Estado para mostrar/ocultar contraseña
     const [showConfirmPassword, setShowConfirmPassword] = useState(false); // Estado para mostrar/ocultar confirmación
+    const [stage, setStage] = useState<'idle' | 'expanding' | 'ready'>('idle');
     const navigate = useNavigate();
+
+    useEffect(() => {
+        const expandTimer = setTimeout(() => setStage('expanding'), 100);
+        const readyTimer = setTimeout(() => setStage('ready'), 1000);
+        return () => {
+            clearTimeout(expandTimer);
+            clearTimeout(readyTimer);
+        };
+    }, []);
 
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setError(null);
@@ -54,10 +63,66 @@ const RegisterPage: FC = () => {
 
     return (
         <div className="register-container">
-            <div className="card shadow-lg w-75" style={{maxWidth: "900px"}}>
+            <div className="mesh-bg"></div>
+            
+            {/* The 3D Portal Seed */}
+            <div className={`portal-reveal ${stage !== 'idle' ? 'expanding' : ''}`}>
+                <div className="portal-face"></div>
+            </div>
+
+            <div className={`auth-stage ${stage === 'ready' ? 'ready' : ''}`}>
+                <div className="card glass-card shadow-lg w-75" style={{maxWidth: "900px"}}>
                 <div className="row g-0">
-                    <div className="col-lg-6 d-none d-lg-block card-image"></div>
-                    <div className="col-lg-6">
+                    <div className="col-lg-4 d-none d-lg-flex auth-visual-column">
+                        <div className="visual-brand mb-2">
+                            <div className="brand-icon-large">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="white" viewBox="0 0 16 16">
+                                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                    <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        
+                        <div className="visual-text mb-3">
+                            <h5 className="mb-1">Comienza Ahora</h5>
+                            <p className="text-white-50 small mb-0">Únete a miles de negocios</p>
+                        </div>
+
+                        <div className="visual-features mb-3">
+                            <div className="feature-item">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
+                                </svg>
+                                <span>Configuración en 5 minutos</span>
+                            </div>
+                            <div className="feature-item">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
+                                </svg>
+                                <span>Múltiples usuarios</span>
+                            </div>
+                            <div className="feature-item">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
+                                </svg>
+                                <span>Soporte incluido</span>
+                            </div>
+                            <div className="feature-item">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
+                                </svg>
+                                <span>Actualizaciones automáticas</span>
+                            </div>
+                        </div>
+
+                        <div className="visual-stats mt-auto">
+                            <div className="stat-badge">
+                                <div className="stat-number">+1000</div>
+                                <div className="stat-label">Negocios activos</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="col-lg-8">
                         <div className="card-body p-5">
                             <div className="text-center mb-4">
                                 <h1 className="h4 text-body mb-0">Crea tu Cuenta</h1>
@@ -67,7 +132,7 @@ const RegisterPage: FC = () => {
                                        message="¡Registro exitoso! Serás redirigido al inicio de sesión."/>
                             )}
                             <form onSubmit={handleSubmit} noValidate>
-                                <div className="row mb-3">
+                                <div className="row mb-2">
                                     <div className="col-sm-12">
                                         <input
                                             type="text"
@@ -79,7 +144,7 @@ const RegisterPage: FC = () => {
                                         />
                                     </div>
                                 </div>
-                                <div className="row mb-3">
+                                <div className="row mb-2">
                                     <div className="col-sm-6">
                                         <input
                                             type="text"
@@ -101,7 +166,7 @@ const RegisterPage: FC = () => {
                                         />
                                     </div>
                                 </div>
-                                <div className="mb-3">
+                                <div className="mb-2">
                                     <input
                                         type="text"
                                         name="identify"
@@ -112,7 +177,7 @@ const RegisterPage: FC = () => {
                                         required
                                     />
                                 </div>
-                                <div className="mb-3">
+                                <div className="mb-2">
                                     <input
                                         type="email"
                                         name="email"
@@ -123,22 +188,8 @@ const RegisterPage: FC = () => {
                                         required
                                     />
                                 </div>
-                                <div className="mb-3">
-                                    <label htmlFor="timezone-select" className="form-label small text-muted">Zona
-                                        Horaria de la Heladería</label>
-                                    <select
-                                        id="timezone-select"
-                                        name="timezone"
-                                        className="form-select form-select-sm"
-                                        value={formData.timezone}
-                                        onChange={handleChange}
-                                    >
-                                        {timezones.map(tz => (
-                                            <option key={tz.value} value={tz.value}>{tz.label}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="row mb-3 g-2">
+                                {/* Timezone hidden - using default America/Bogota */}
+                                <div className="row mb-2 g-2">
                                     <div className="col-sm-6 input-group">
                                         <input
                                             type={showPassword ? "text" : "password"}
@@ -175,7 +226,7 @@ const RegisterPage: FC = () => {
                                         </div>
                                     )}
                                 </div>
-                                <div className="mb-3">
+                                <div className="mb-2">
                                     <input
                                         type="text"
                                         name="phone"
@@ -216,7 +267,8 @@ const RegisterPage: FC = () => {
                 </div>
             </div>
         </div>
-    );
+    </div>
+);
 };
 
 export default RegisterPage;

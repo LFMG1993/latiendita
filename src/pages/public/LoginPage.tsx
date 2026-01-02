@@ -1,4 +1,4 @@
-import {useState, FC, FormEvent, ChangeEvent} from 'react';
+import {useState, FC, FormEvent, ChangeEvent, useEffect} from 'react';
 import {Link} from 'react-router-dom';
 import {auth} from '../../firebase.ts';
 import {signInWithEmailAndPassword} from 'firebase/auth';
@@ -9,6 +9,19 @@ const LoginPage: FC = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [stage, setStage] = useState<'idle' | 'expanding' | 'ready'>('idle');
+
+    useEffect(() => {
+        // Start expanding after a tiny delay
+        const expandTimer = setTimeout(() => setStage('expanding'), 100);
+        // Form arrives after expansion completes
+        const readyTimer = setTimeout(() => setStage('ready'), 1000);
+        
+        return () => {
+            clearTimeout(expandTimer);
+            clearTimeout(readyTimer);
+        };
+    }, []);
 
     const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -30,11 +43,65 @@ const LoginPage: FC = () => {
 
     return (
         <div className="login-container">
-            <div className="card shadow-lg" style={{maxWidth: '800px', width: '100%'}}>
+            <div className="mesh-bg"></div>
+            
+            {/* The 3D Portal Seed */}
+            <div className={`portal-reveal ${stage !== 'idle' ? 'expanding' : ''}`}>
+                <div className="portal-face"></div>
+            </div>
+
+            <div className={`auth-stage ${stage === 'ready' ? 'ready' : ''}`}>
+                <div className="card glass-card shadow-lg" style={{maxWidth: '800px', width: '100%'}}>
                 <div className="row g-0">
-                    <div className="col-md-6 d-none d-md-block login-card-image">
+                    <div className="col-md-4 d-none d-md-flex auth-visual-column">
+                        <div className="visual-brand mb-2">
+                            <div className="brand-icon-large">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="white" viewBox="0 0 16 16">
+                                    <path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5zM3.102 4l1.313 7h8.17l1.313-7H3.102zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        
+                        <div className="visual-text mb-3">
+                            <h5 className="mb-1">Bienvenido</h5>
+                            <p className="text-white-50 small mb-0">Sistema de gestión integral</p>
+                        </div>
+
+                        <div className="visual-features mb-3">
+                            <div className="feature-item">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
+                                </svg>
+                                <span>Punto de venta rápido</span>
+                            </div>
+                            <div className="feature-item">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
+                                </svg>
+                                <span>Control de inventario</span>
+                            </div>
+                            <div className="feature-item">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
+                                </svg>
+                                <span>Reportes en tiempo real</span>
+                            </div>
+                            <div className="feature-item">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
+                                </svg>
+                                <span>Gestión de clientes</span>
+                            </div>
+                        </div>
+
+                        <div className="visual-stats mt-auto">
+                            <div className="stat-badge">
+                                <div className="stat-number">100%</div>
+                                <div className="stat-label">Seguro</div>
+                            </div>
+                        </div>
                     </div>
-                    <div className="col-md-6">
+                    <div className="col-md-8">
                         <div className="card-body p-4 p-lg-5">
                             <h2 className="card-title text-center mb-4">Iniciar Sesión</h2>
                             {error && <div className="alert alert-danger">{error}</div>}
@@ -84,7 +151,8 @@ const LoginPage: FC = () => {
                 </div>
             </div>
         </div>
-    );
+    </div>
+);
 }
 
 export default LoginPage;

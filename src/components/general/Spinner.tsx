@@ -5,13 +5,20 @@ interface SpinnerProps {
     size?: number;
 }
 
-const Spinner: FC<SpinnerProps> = ({size = 150}) => {
-    const style = {
-        height: `${size}px`,
-        width: `${size * 0.66}px`,
-    };
+const Spinner: FC<SpinnerProps> = ({size = 100}) => {
+    const scale = size / 100;
     return (
-        <div className="loader" style={style}></div>
+        <div className="loader-3d-container" style={{ transform: `scale(${scale})` }}>
+            <div className="cube">
+                <div className="face top"></div>
+                <div className="face bottom"></div>
+                <div className="face left"></div>
+                <div className="face right"></div>
+                <div className="face front"></div>
+                <div className="face back"></div>
+            </div>
+            <div className="shadow-3d"></div>
+        </div>
     );
 };
 

@@ -1,0 +1,236 @@
+/* Product Form Animations */
+.product-form-container {
+    animation: fadeIn 0.3s ease-in;
+    padding: 1rem;
+}
+
+.product-form-container .form-label {
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.product-form-container hr {
+    opacity: 0.1;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Form Fields Animation */
+.product-form-container .form-control,
+.product-form-container .form-select {
+    transition: all 0.2s ease;
+}
+
+.product-form-container .form-control:focus,
+.product-form-container .form-select:focus {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15);
+}
+
+/* Recipe Checkbox Animation */
+.recipe-checkbox-container {
+    transition: all 0.3s ease;
+}
+
+.recipe-checkbox-container .form-check-input {
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.recipe-checkbox-container .form-check-input:checked {
+    transform: scale(1.1);
+}
+
+.recipe-checkbox-container:hover {
+    background: rgba(13, 110, 253, 0.05);
+    border-radius: 8px;
+    padding: 0.75rem;
+}
+
+.recipe-checkbox-container {
+    padding: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+/* Recipe Section Slide Animation */
+.recipe-section {
+    animation: slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: top;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        max-height: 2000px;
+        transform: translateY(0);
+    }
+}
+
+/* Recipe Item Animation */
+.recipe-item {
+    animation: fadeInSlide 0.3s ease-out;
+    transition: all 0.2s ease;
+}
+
+@keyframes fadeInSlide {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.recipe-item:hover {
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 8px;
+}
+
+/* Button Animations */
+.btn-add-ingredient {
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-add-ingredient::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.3s, height 0.3s;
+}
+
+.btn-add-ingredient:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.btn-add-ingredient:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-add-ingredient:active {
+    transform: translateY(0);
+}
+
+/* Delete Button Animation */
+.btn-outline-danger {
+    transition: all 0.2s ease;
+}
+
+.btn-outline-danger:hover {
+    transform: rotate(5deg) scale(1.05);
+}
+
+.btn-outline-danger:active {
+    transform: rotate(0) scale(0.95);
+}
+
+/* Submit Button Animation */
+.btn-primary {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-primary::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.btn-primary:hover::after {
+    width: 400px;
+    height: 400px;
+}
+
+.btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(13, 110, 253, 0.3);
+}
+
+.btn-primary:active {
+    transform: translateY(-1px);
+}
+
+/* Loading State Animation */
+.btn-primary:disabled {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* Alert Animation */
+.alert {
+    animation: slideInDown 0.4s ease-out;
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Smooth transitions for all interactive elements */
+.product-form-container input,
+.product-form-container select,
+.product-form-container button {
+    transition: all 0.2s ease;
+}
+
+/* Focus ring animation */
+.product-form-container .form-control:focus,
+.product-form-container .form-select:focus {
+    animation: focusRing 0.3s ease-out;
+}
+
+@keyframes focusRing {
+    0% {
+        box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.4);
+    }
+    100% {
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+}

@@ -6,6 +6,7 @@ import {useTenant} from "../../context/TenantContext";
 
 const HomePage: FC = () => {
     const [isScrolled, setIsScrolled] = useState(false);
+    const [entranceComplete, setEntranceComplete] = useState(false);
     const {tenant} = useTenant();
     const {terminology, theme} = tenant;
 
@@ -14,7 +15,26 @@ const HomePage: FC = () => {
             setIsScrolled(window.scrollY > 10);
         };
         window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
+
+        // Entrance animation timer
+        const timer = setTimeout(() => setEntranceComplete(true), 500);
+
+        // Intersection Observer for scroll reveals
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el));
+
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            clearTimeout(timer);
+            observer.disconnect();
+        };
     }, []);
 
     // Helper para capitalizar
@@ -22,34 +42,38 @@ const HomePage: FC = () => {
 
     return (
         <div className="home-page">
+            {/* Cortina de Revelación */}
+            <div className={`reveal-curtain ${entranceComplete ? 'hidden' : ''}`}>
+                <div className="curtain-logo">{terminology.shopLabel}</div>
+            </div>
+
             {/* Barra de Navegación */}
             <nav
-                className={`navbar navbar-expand-lg navbar-dark fixed-top ${isScrolled ? 'scrolled' : ''}`}>
+                className={`navbar navbar-expand-lg navbar-dark fixed-top ${isScrolled ? 'scrolled' : ''} ${entranceComplete ? 'visible' : ''}`}>
                 <div className="container-fluid">
                     <Link to="/" className="navbar-brand fw-bold fs-4">
                         {theme.logoURL ? <img src={theme.logoURL} alt="Logo" height="30" className="d-inline-block align-text-top me-2"/> : null}
                         {terminology.shopLabel}
                     </Link>
                     <div>
-                        <Link to="/login" className="btn btn-outline-primary me-2 text-white">Iniciar Sesión</Link>
+                        <Link to="/login" className="btn btn-outline-primary me-2 text-white border-white">Iniciar Sesión</Link>
                         <Link to="/register" className="btn btn-primary">Registrarse</Link>
                     </div>
                 </div>
             </nav>
 
             {/* Sección de presentación. */}
-            <header className="hero-section text-center text-white d-flex flex-column justify-content-center" style={{background: `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), ${theme.primaryColor}`}}> 
-            {/* Nota: Idealmente el background debería ser una imagen o un gradiente configurable */}
-                <div className="container">
+            <header className="hero-section text-center text-white" style={{background: `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), ${theme.primaryColor}`}}> 
+                <div className={`container hero-content ${entranceComplete ? 'inner-visible' : ''}`}>
                     <h1 className="display-3 fw-bolder">La Herramienta Definitiva para tu {capitalize(terminology.shopLabel)}.</h1>
                     <p className="lead my-4">Optimiza tus ventas, gestiona tu inventario y toma el control de tu
                         negocio con una plataforma diseñada para crecer contigo.</p>
-                    <Link to="/register" className="btn btn-light btn-lg mt-3 fw-bold">Empieza Gratis</Link>
+                    <Link to="/register" className="btn btn-light btn-lg mt-3 fw-bold px-5">Empieza Gratis</Link>
                 </div>
             </header>
 
             {/* Sección de funcionalidades */}
-            <section id="features" className="container text-center py-5">
+            <section id="features" className="container text-center py-5 scroll-reveal">
                 <h2 className="fw-bold mb-5">Todo lo que necesitas, en un solo lugar</h2>
                 <div className="row g-4">
                     <div className="col-md-4">
@@ -78,8 +102,9 @@ const HomePage: FC = () => {
                     </div>
                 </div>
             </section>
+
             {/* sección de servicios gratis */}
-            <section id="why-free" className="py-5 bg-body-tertiary">
+            <section id="why-free" className="py-5 bg-body-tertiary scroll-reveal">
                 <div className="container text-center">
                     <GiftFill size={60} className="text-primary mb-3" style={{color: theme.primaryColor}}/>
                     <h2 className="fw-bold">Nuestra Misión es Apoyarte</h2>
@@ -92,7 +117,7 @@ const HomePage: FC = () => {
             </section>
 
             {/* Seguridad y gestion de equipos */}
-            <section id="security" className="container py-5">
+            <section id="security" className="container py-5 scroll-reveal">
                 <div className="row align-items-center">
                     <div className="col-md-6">
                         <h2 className="fw-bold">Seguridad y Control Total</h2>
@@ -108,7 +133,7 @@ const HomePage: FC = () => {
             </section>
 
             {/* Sección final de llamada a la acción */}
-            <section className="final-cta py-5 text-center">
+            <section className="final-cta py-5 text-center scroll-reveal">
                 <div className="container">
                     <h2 className="fw-bold">¿Listo para transformar tu negocio?</h2>
                     <p>Crea tu cuenta en menos de un minuto y empieza a gestionar tu {terminology.shopLabel.toLowerCase()} como un profesional.
@@ -130,6 +155,6 @@ const HomePage: FC = () => {
             </footer>
         </div>
     );
-}
+};
 
 export default HomePage;

@@ -2,6 +2,7 @@ import {FC, useState, useEffect, FormEvent, useMemo} from 'react';
 import {NewProductData, RecipeItem, EnrichedIngredient, Product, UpdateProductData} from "../../types";
 import {addProduct, updateProduct} from "../../services/productServices.ts";
 import {Trash} from "react-bootstrap-icons";
+import "../../style/ProductForm.css";
 
 interface ProductFormProps {
     shopId: string;
@@ -15,6 +16,7 @@ const ProductForm: FC<ProductFormProps> = ({shopId, onFormSubmit, productToEdit,
     const [price, setPrice] = useState(0);
     const [category, setCategory] = useState('');
     const [recipe, setRecipe] = useState<RecipeItem[]>([]);
+    const [hasRecipe, setHasRecipe] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -30,13 +32,16 @@ const ProductForm: FC<ProductFormProps> = ({shopId, onFormSubmit, productToEdit,
             setName(productToEdit.name);
             setPrice(productToEdit.price);
             setCategory(productToEdit.category || '');
-            setRecipe(productToEdit.recipe || []);
+            const productRecipe = productToEdit.recipe || [];
+            setRecipe(productRecipe);
+            setHasRecipe(productRecipe.length > 0);
         } else {
             // Resetea el formulario si no hay producto para editar (modo creación)
             setName('');
             setPrice(0);
             setCategory('');
             setRecipe([]);
+            setHasRecipe(false);
         }
     }, [productToEdit]);
 
@@ -107,78 +112,108 @@ const ProductForm: FC<ProductFormProps> = ({shopId, onFormSubmit, productToEdit,
     };
 
     return (
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="product-form-container">
             {error && <div className="alert alert-danger">{error}</div>}
 
             <div className="row mb-3">
-                <div className="col-md-6">
-                    <label htmlFor="productName" className="form-label">Nombre del Producto</label>
+                <div className="col-md-12 mb-3">
+                    <label htmlFor="productName" className="form-label fw-semibold">Nombre del Producto</label>
                     <input type="text" id="productName" className="form-control" value={name}
                            onChange={(e) => setName(e.target.value)} required/>
                 </div>
-                <div className="col-md-3">
-                    <label htmlFor="price" className="form-label">Precio de Venta</label>
+            </div>
+
+            <div className="row mb-3">
+                <div className="col-md-4">
+                    <label htmlFor="price" className="form-label fw-semibold">Precio de Venta</label>
                     <input type="number" id="price" className="form-control" value={price}
                            onChange={(e) => setPrice(Number(e.target.value))} required/>
                 </div>
-                <div className="col-md-3">
-                    <label htmlFor="category" className="form-label">Categoría</label>
+                <div className="col-md-8">
+                    <label htmlFor="category" className="form-label fw-semibold">Categoría</label>
                     <input type="text" id="category" className="form-control" value={category}
                            onChange={(e) => setCategory(e.target.value)} placeholder="Ej: Bebidas, Postres"/>
                 </div>
             </div>
 
-            <hr/>
+            <hr className="my-4"/>
 
-            <h5>Receta</h5>
-            {recipe.map((item, index) => (
-                <div key={index} className="row g-2 mb-2 align-items-center">
-                    <div className="col-6">
-                        <select
-                            className="form-select"
-                            value={item.ingredientId}
-                            onChange={(e) => handleRecipeChange(index, 'ingredientId', e.target.value)}
-                            required
-                        >
-                            <option value="" disabled>Selecciona...</option>
-                            <optgroup label="Categorías de Ingredientes (Variable)">
-                                {uniqueCategories.map(category => (
-                                    <option key={`cat-${category}`} value={`CATEGORY::${category}`}>
-                                        Cualquier {category}
-                                    </option>
-                                ))}
-                            </optgroup>
-                            <optgroup label="Ingredientes Específicos (Fijo)">
-                                {availableIngredients.map(ing => (
-                                    <option key={ing.id} value={ing.id}>
-                                        {ing.name} ({ing.consumptionUnit})
-                                    </option>
-                                ))}
-                            </optgroup>
-                        </select>
-                    </div>
-                    <div className="col-4">
-                        <input
-                            type="number"
-                            className="form-control"
-                            placeholder="Cantidad"
-                            value={item.quantity}
-                            onChange={(e) => handleRecipeChange(index, 'quantity', Number(e.target.value))}
-                            required
-                        />
-                    </div>
-                    <div className="col-2">
-                        <button type="button" className="btn btn-outline-danger"
-                                onClick={() => handleRemoveRecipeItem(index)}>
-                            <Trash/>
-                        </button>
-                    </div>
+            <div className="mb-3 form-check recipe-checkbox-container">
+                <input
+                    type="checkbox"
+                    className="form-check-input"
+                    id="hasRecipeCheck"
+                    checked={hasRecipe}
+                    onChange={(e) => {
+                        setHasRecipe(e.target.checked);
+                        if (!e.target.checked) {
+                            setRecipe([]); // Clear recipe if unchecked
+                        }
+                    }}
+                />
+                <label className="form-check-label" htmlFor="hasRecipeCheck">
+                    ¿Este producto tiene receta?
+                </label>
+                <small className="form-text text-muted d-block">
+                    Marca esta opción si el producto requiere ingredientes para su preparación
+                </small>
+            </div>
+
+            {hasRecipe && (
+                <div className="recipe-section">
+                    <h5 className="mb-3">Receta</h5>
+                    {recipe.map((item, index) => (
+                        <div key={index} className="row g-3 mb-3 align-items-end recipe-item">
+                            <div className="col-md-7">
+                                <label className="form-label small text-muted">Ingrediente</label>
+                                <select
+                                    className="form-select"
+                                    value={item.ingredientId}
+                                    onChange={(e) => handleRecipeChange(index, 'ingredientId', e.target.value)}
+                                    required
+                                >
+                                    <option value="" disabled>Selecciona...</option>
+                                    <optgroup label="Categorías de Ingredientes (Variable)">
+                                        {uniqueCategories.map(category => (
+                                            <option key={`cat-${category}`} value={`CATEGORY::${category}`}>
+                                                Cualquier {category}
+                                            </option>
+                                        ))}
+                                    </optgroup>
+                                    <optgroup label="Ingredientes Específicos (Fijo)">
+                                        {availableIngredients.map(ing => (
+                                            <option key={ing.id} value={ing.id}>
+                                                {ing.name} ({ing.consumptionUnit})
+                                            </option>
+                                        ))}
+                                    </optgroup>
+                                </select>
+                            </div>
+                            <div className="col-md-3">
+                                <label className="form-label small text-muted">Cantidad</label>
+                                <input
+                                    type="number"
+                                    className="form-control"
+                                    placeholder="0"
+                                    value={item.quantity}
+                                    onChange={(e) => handleRecipeChange(index, 'quantity', Number(e.target.value))}
+                                    required
+                                />
+                            </div>
+                            <div className="col-md-2">
+                                <button type="button" className="btn btn-outline-danger w-100"
+                                        onClick={() => handleRemoveRecipeItem(index)}>
+                                    <Trash/>
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+
+                    <button type="button" className="btn btn-sm btn-outline-secondary mb-3 btn-add-ingredient" onClick={handleAddRecipeItem}>
+                        + Añadir Ingrediente
+                    </button>
                 </div>
-            ))}
-
-            <button type="button" className="btn btn-sm btn-outline-secondary mb-3" onClick={handleAddRecipeItem}>
-                + Añadir Ingrediente
-            </button>
+            )}
 
             <div className="d-flex justify-content-end">
                 <button type="submit" className="btn btn-primary" disabled={loading}>
