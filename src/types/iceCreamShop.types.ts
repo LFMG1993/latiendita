@@ -46,6 +46,8 @@ export interface Heladeria {
         shopLabel: string; // Ej: "Heladería", "Frutería"
         productLabel: string; // Ej: "Helado", "Producto"
     };
+    modules?: Record<string, boolean>; // Reemplaza a permisos globales de tienda. Ej: { sales: true, inventory: false }
+    features?: Record<string, boolean>; // Control granular: permissionId -> enabled/disabled
 }
 
 // Tipo para crear una nueva heladería

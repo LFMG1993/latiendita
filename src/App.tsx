@@ -36,6 +36,9 @@ import ExpensesPage from "./pages/admin/ExpensesPage.tsx";
 import {checkSchedule} from "./utils/scheduleUtils.ts";
 import {Heladeria} from "./types";
 import UpdateNotification from "./components/general/UpdateNotification.tsx";
+import {SuperAdminDashboard} from "./pages/admin/SuperAdminDashboard.tsx";
+import {TenantProvider} from "./context/TenantContext";
+import {ThemeProvider} from "./context/ThemeContext";
 
 const App: FC = () => {
     const {loading, setLoading, setAuthUser, setUserIceCreamShop, user} = useAuthStore();
@@ -137,6 +140,8 @@ const App: FC = () => {
                 navigate('/cash-session', {replace: true});
             } else if (user.role === 'owner') {
                 navigate('/dashboard', {replace: true});
+            } else if (user.role === 'superAdmin') {
+                navigate('/super-admin', {replace: true});
             }
             setInitialRedirectDone(true); // Marcamos que la redirección ya se hizo.
         }
@@ -206,13 +211,13 @@ const App: FC = () => {
                 <Route path="/expenses"
                        element={<ProtectedRoute
                            requiredPermission="expenses_view"><MainLayout><ExpensesPage/></MainLayout></ProtectedRoute>}/>
+                <Route path="/super-admin"
+                       element={<ProtectedRoute><MainLayout><SuperAdminDashboard/></MainLayout></ProtectedRoute>}/>
             </Routes>
         </>
     );
 }
 
-import {TenantProvider} from "./context/TenantContext";
-import {ThemeProvider} from "./context/ThemeContext";
 
 const AppWrapper: FC = () => {
     // Envolvemos App en el Router para que el hook useNavigate esté disponible

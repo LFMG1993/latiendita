@@ -5,10 +5,12 @@ import {navItemsConfig} from "../../config/navConfig.ts";
 import {useAuthStore} from "../../store/authStore.ts";
 import {getPendingInvitations} from "../../services/teamServices.ts";
 import {InvitationData, Heladeria} from "../../types";
-import {Envelope, PersonCircle, Moon, Sun, List, Shop} from "react-bootstrap-icons";
+import {Envelope, PersonCircle, Moon, Sun, List, Shop, ChevronDown, ChevronRight, 
+        CashStack, BoxSeam, GraphUp, GearFill} from "react-bootstrap-icons";
 import {logoutService} from "../../services/logoutService.ts";
 import {useTenant} from "../../context/TenantContext";
 import {useTheme} from "../../context/ThemeContext";
+import "../../style/SmartSidebar.css";
 
 interface SmartSidebarProps {
     isExpanded: boolean;
@@ -22,6 +24,12 @@ const SmartSidebar: FC<SmartSidebarProps> = ({isExpanded, setIsExpanded}) => {
     const {tenant} = useTenant();
     const {theme, toggleTheme} = useTheme();
     const [pendingInvitations, setPendingInvitations] = useState<InvitationData[]>([]);
+    const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({
+        sales: false,
+        inventory: false,
+        finance: false,
+        settings: false
+    });
     const isOwner = user?.role === 'owner';
 
     const activeHeladeriaName = iceCreamShops?.find(h => h.id === activeIceCreamShopId)?.name;
@@ -49,6 +57,31 @@ const SmartSidebar: FC<SmartSidebarProps> = ({isExpanded, setIsExpanded}) => {
         setActiveIceCreamShopId(heladeria.id);
     };
 
+    const toggleGroup = (category: string) => {
+        setCollapsedGroups(prev => ({
+            ...prev,
+            [category]: !prev[category]
+        }));
+    };
+
+    const categoryConfig = {
+        sales: { label: 'Ventas y Operaciones', icon: CashStack },
+        inventory: { label: 'Inventario y Productos', icon: BoxSeam },
+        finance: { label: 'Finanzas y Análisis', icon: GraphUp },
+        settings: { label: 'Configuración', icon: GearFill }
+    };
+
+    // Group items by category
+    const groupedItems = navItemsConfig
+        .filter(item => item.permissionId ? hasPermission(item.permissionId) : true)
+        .reduce((acc, item) => {
+            if (!acc[item.category]) {
+                acc[item.category] = [];
+            }
+            acc[item.category].push(item);
+            return acc;
+        }, {} as Record<string, typeof navItemsConfig>);
+
     return (
         <nav
             id="sidebarMenu"
@@ -70,42 +103,63 @@ const SmartSidebar: FC<SmartSidebarProps> = ({isExpanded, setIsExpanded}) => {
             </div>
             <div className="flex-grow-1 overflow-auto pt-2">
                 <ul className="nav flex-column mb-auto">
-                    {navItemsConfig
-                        .filter(item => item.permissionId ? hasPermission(item.permissionId) : true)
-                        .map(item => {
-                            const isTeamManagement = item.to === '/team-management';
-                            const showBadge = isTeamManagement && isOwner && pendingInvitations.length > 0;
+                    {Object.entries(categoryConfig).map(([category, config]) => {
+                        const items = groupedItems[category] || [];
+                        if (items.length === 0) return null;
 
-                            let label = item.label;
-                            if (label === 'Heladerías') {
-                                label = tenant.terminology.shopLabelPlural;
-                            }
+                        const isCollapsed = collapsedGroups[category];
+                        const CategoryIcon = config.icon;
 
-                            return (
-                                <li className="nav-item" key={item.label}>
-                                    <NavLink className="nav-link position-relative" to={item.to}>
-                                        <item.Icon className="sidebar-icon" size={24}/>
-                                        <span className="sidebar-text">{label}</span>
-                                        {showBadge && (
-                                            <span
-                                                className="badge rounded-pill bg-danger position-absolute top-50 translate-middle-y"
-                                                style={{
-                                                    right: isExpanded ? '1rem' : '-1.5rem',
-                                                    transition: 'right 0.2s ease-in-out'
-                                                }}>
-                                                 {pendingInvitations.length}
-                                                <Envelope className="ms-1"/>
-                                             </span>
-                                        )}
-                                    </NavLink>
-                                </li>
-                            );
+                        return (
+                            <li key={category} className="nav-group">
+                                <button
+                                    className="nav-group-header"
+                                    onClick={() => toggleGroup(category)}
+                                >
+                                    <CategoryIcon className="sidebar-icon" size={20} />
+                                    <span className="sidebar-text">{config.label}</span>
+                                    <span className="sidebar-text ms-auto">
+                                        {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                                    </span>
+                                </button>
+                                <ul className={`nav-group-items ${isCollapsed ? 'collapsed' : ''}`}>
+                                    {items.map(item => {
+                                        const isTeamManagement = item.to === '/team-management';
+                                        const showBadge = isTeamManagement && isOwner && pendingInvitations.length > 0;
 
-                        })}
+                                        let label = item.label;
+                                        if (label === 'Heladerías') {
+                                            label = tenant.terminology.shopLabelPlural;
+                                        }
+
+                                        return (
+                                            <li className="nav-item" key={item.label}>
+                                                <NavLink className="nav-link position-relative" to={item.to}>
+                                                    <item.Icon className="sidebar-icon" size={20}/>
+                                                    <span className="sidebar-text">{label}</span>
+                                                    {showBadge && (
+                                                        <span
+                                                            className="badge rounded-pill bg-danger position-absolute top-50 translate-middle-y"
+                                                            style={{
+                                                                right: isExpanded ? '1rem' : '-1.5rem',
+                                                                transition: 'right 0.2s ease-in-out'
+                                                            }}>
+                                                             {pendingInvitations.length}
+                                                            <Envelope className="ms-1"/>
+                                                         </span>
+                                                    )}
+                                                </NavLink>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            </li>
+                        );
+                    })}
 
                     {/* Acceso directo a Mi Menú Público (Solo si hay tienda activa) */}
                     {activeIceCreamShopId && (
-                         <li className="nav-item">
+                         <li className="nav-item mt-3">
                              <a 
                                  href={`/catalogo?shopId=${activeIceCreamShopId}`} 
                                  target="_blank" 

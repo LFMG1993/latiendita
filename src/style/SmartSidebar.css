@@ -1,0 +1,123 @@
+/* Navigation Group Styles */
+.nav-group {
+    margin-bottom: 0.5rem;
+}
+
+.nav-group-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: transparent;
+    border: none;
+    color: var(--bs-body-color);
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 0.375rem;
+}
+
+.nav-group-header:hover {
+    background: rgba(var(--bs-primary-rgb), 0.1);
+}
+
+.nav-group-header .sidebar-icon {
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    min-width: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-group-header:hover .sidebar-icon {
+    opacity: 1;
+}
+
+/* Group Items Container */
+.nav-group-items {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+    max-height: 1000px;
+    overflow: hidden;
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+    opacity: 1;
+}
+
+.nav-group-items.collapsed {
+    max-height: 0;
+    opacity: 0;
+}
+
+/* Nested Nav Items */
+.nav-group-items .nav-item {
+    padding-left: 1rem;
+}
+
+.nav-group-items .nav-link {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+}
+
+.nav-group-items .nav-link .sidebar-icon {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Animation for items appearing */
+.nav-group-items:not(.collapsed) .nav-item {
+    animation: slideIn 0.2s ease-out backwards;
+}
+
+.nav-group-items:not(.collapsed) .nav-item:nth-child(1) { animation-delay: 0.05s; }
+.nav-group-items:not(.collapsed) .nav-item:nth-child(2) { animation-delay: 0.1s; }
+.nav-group-items:not(.collapsed) .nav-item:nth-child(3) { animation-delay: 0.15s; }
+.nav-group-items:not(.collapsed) .nav-item:nth-child(4) { animation-delay: 0.2s; }
+.nav-group-items:not(.collapsed) .nav-item:nth-child(5) { animation-delay: 0.25s; }
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Collapsed sidebar adjustments */
+.smart-sidebar:not(.sidebar-expanded) .nav-group-header {
+    justify-content: center;
+    padding: 0.75rem 0.5rem;
+}
+
+.smart-sidebar:not(.sidebar-expanded) .nav-group-header .sidebar-text {
+    display: none;
+}
+
+.smart-sidebar:not(.sidebar-expanded) .nav-group-items {
+    display: none;
+}
+
+.smart-sidebar:not(.sidebar-expanded) .nav-group {
+    margin-bottom: 0.25rem;
+}
+
+/* Active state for group items */
+.nav-group-items .nav-link.active {
+    background: rgba(var(--bs-primary-rgb), 0.15);
+    color: var(--bs-primary);
+    font-weight: 600;
+}
+
+.nav-group-items .nav-link.active .sidebar-icon {
+    color: var(--bs-primary);
+}
