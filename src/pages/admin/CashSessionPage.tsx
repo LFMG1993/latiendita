@@ -127,18 +127,29 @@ const CashSessionPage: FC = () => {
         let cashSales = 0;
         let electronicSales = 0;
 
+        console.log("Calculando totales de sesión. Ventas raw:", sessionSales);
+
         sessionSales.forEach(sale => {
             sale.payments.forEach(payment => {
+                const amount = Number(payment.amount);
+                console.log(`Pago: ${payment.amount} (Type: ${typeof payment.amount}) -> Parsed: ${amount}`);
                 if (payment.type === 'cash') {
-                    cashSales += payment.amount;
+                    cashSales += amount;
                 } else {
-                    electronicSales += payment.amount;
+                    electronicSales += amount;
                 }
             });
         });
 
-        const totalPurchaseExpenses = sessionPurchases.reduce((sum, purchase) => sum + purchase.total, 0);
-        const totalOperationalExpenses = sessionExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+        const totalPurchaseExpenses = sessionPurchases.reduce((sum, purchase) => sum + Number(purchase.total), 0);
+        const totalOperationalExpenses = sessionExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
+
+        console.log("Totales calculados:", {
+            cashSales,
+            electronicSales,
+            totalPurchaseExpenses,
+            totalOperationalExpenses
+        });
 
         return {
             cashSales,

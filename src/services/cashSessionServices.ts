@@ -55,14 +55,14 @@ export const closeCashSession = async (heladeriaId: string, session: CashSession
     );
     const purchasesSnapshot = await getDocs(purchasesQuery);
     const expensesFromPurchases = purchasesSnapshot.docs.map(doc => doc.data() as Purchase);
-    const totalPurchaseExpenses = expensesFromPurchases.reduce((sum, exp) => sum + exp.total, 0);
+    const totalPurchaseExpenses = expensesFromPurchases.reduce((sum, exp) => sum + Number(exp.total), 0);
 
     // 2.1. OBTENER LOS GASTOS OPERATIVOS REGISTRADOS EN LA SESIÓN (LA PARTE QUE FALTABA)
     const expensesRef = collection(db, "iceCreamShops", heladeriaId, "expenses");
     const expensesQuery = query(expensesRef, where("sessionId", "==", session.id));
     const expensesSnapshot = await getDocs(expensesQuery);
     const operationalExpenses = expensesSnapshot.docs.map(doc => doc.data() as Expense);
-    const totalOperationalExpenses = operationalExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+    const totalOperationalExpenses = operationalExpenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
 
     // 2.2. CALCULAR EL TOTAL DE GASTOS CORRECTO
     const totalExpenses = totalPurchaseExpenses + totalOperationalExpenses;
@@ -73,14 +73,14 @@ export const closeCashSession = async (heladeriaId: string, session: CashSession
     sales.forEach(sale => {
         sale.payments.forEach(payment => {
             if (payment.type === 'cash') {
-                cashSales += payment.amount;
+                cashSales += Number(payment.amount);
             } else {
-                transferSales += payment.amount;
+                transferSales += Number(payment.amount);
             }
         });
     });
 
-    const expectedCashInBox = session.openingBalance + cashSales - totalExpenses;
+    const expectedCashInBox = Number(session.openingBalance) + cashSales - totalExpenses;
     const difference = closingData.closingBalance - expectedCashInBox;
 
     // 4. Actualizar el documento de la sesión

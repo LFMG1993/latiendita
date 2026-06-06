@@ -15,6 +15,7 @@ export interface Product {
     category: string;
     recipe: RecipeItem[];
     cost?: number;
+    stock?: number;
     createdAt: Timestamp;
     updatedAt?: Timestamp;
 }

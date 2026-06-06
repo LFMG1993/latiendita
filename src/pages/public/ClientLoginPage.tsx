@@ -1,33 +1,45 @@
-import {useState, FC, FormEvent, ChangeEvent} from 'react';
-import {Link, useNavigate, useSearchParams} from 'react-router-dom';
+import {useState, FC, FormEvent} from 'react';
+import {Link, useSearchParams} from 'react-router-dom';
 import {auth} from '../../firebase.ts';
 import {signInWithEmailAndPassword} from 'firebase/auth';
-import '../../style/Login.css'; // Reutilizamos estilos por simplicidad, o podríamos crear uno nuevo
+import {getClientEmailByDocumentId} from '../../services/authServices';
+import '../../style/Login.css';
 import { useTenant } from '../../context/TenantContext';
 
 const ClientLoginPage: FC = () => {
-    const [email, setEmail] = useState('');
+    const [documentId, setDocumentId] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { tenant } = useTenant();
 
-    const redirectUrl = searchParams.get('redirect') || '/';
+    const redirectUrl = searchParams.get('redirect') || '/client/dashboard';
 
     const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setError('');
         setLoading(true);
         try {
+            // 1. Buscar el email del cliente por su cédula
+            const email = await getClientEmailByDocumentId(documentId);
+            if (!email) {
+                setError('No se encontró ningún cliente con ese documento de identidad.');
+                setLoading(false);
+                return;
+            }
+
+            // 2. Iniciar sesión con email + contraseña
             await signInWithEmailAndPassword(auth, email, password);
-            // Login exitoso, redirigir
-            navigate(redirectUrl);
+            // App.tsx detectará el login y redirigirá según el rol.
         } catch (err: any) {
             console.error("Error en el login:", err);
-            if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-                setError('Correo o contraseña incorrectos.');
+            if (
+                err.code === 'auth/wrong-password' ||
+                err.code === 'auth/invalid-credential' ||
+                err.code === 'auth/user-not-found'
+            ) {
+                setError('Contraseña incorrecta. Inténtalo de nuevo.');
             } else {
                 setError('Error al iniciar sesión. Inténtalo de nuevo.');
             }
@@ -41,7 +53,9 @@ const ClientLoginPage: FC = () => {
                 <div className="card-body p-5">
                     <div className="text-center mb-4">
                         <h3 className="fw-bold mb-1">¡Bienvenido!</h3>
-                        <p className="text-secondary small">Inicia sesión para finalizar tu pedido en <strong>{tenant.terminology.shopLabel}</strong></p>
+                        <p className="text-secondary small">
+                            Inicia sesión en <strong>{tenant.terminology.shopLabel}</strong>
+                        </p>
                     </div>
 
                     {error && <div className="alert alert-danger py-2 small">{error}</div>}
@@ -49,15 +63,15 @@ const ClientLoginPage: FC = () => {
                     <form onSubmit={handleLogin}>
                         <div className="form-floating mb-3">
                             <input
-                                type="email"
+                                type="text"
                                 className="form-control"
-                                id="email"
-                                placeholder="nombre@ejemplo.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
+                                id="documentId"
+                                placeholder="Número de cédula"
+                                value={documentId}
+                                onChange={(e) => setDocumentId(e.target.value)}
                                 required
                             />
-                            <label htmlFor="email">Correo Electrónico</label>
+                            <label htmlFor="documentId">🗒️ Documento de Identidad</label>
                         </div>
                         <div className="form-floating mb-4">
                             <input
@@ -73,20 +87,26 @@ const ClientLoginPage: FC = () => {
                         </div>
 
                         <div className="d-grid mb-3">
-                            <button 
-                                type="submit" 
-                                className="btn btn-primary btn-lg fw-bold" 
+                            <button
+                                type="submit"
+                                className="btn btn-primary btn-lg fw-bold"
                                 disabled={loading}
                                 style={{backgroundColor: tenant.theme.primaryColor, borderColor: tenant.theme.primaryColor}}
                             >
-                                {loading ? 'Entrando...' : 'Iniciar Sesión'}
+                                {loading ? (
+                                    <><span className="spinner-border spinner-border-sm me-2" role="status"/>Buscando...</>
+                                ) : 'Iniciar Sesión'}
                             </button>
                         </div>
                     </form>
 
                     <div className="text-center mt-4">
                         <p className="small text-secondary mb-0">¿Primera vez aquí?</p>
-                        <Link to={`/client-register?redirect=${encodeURIComponent(redirectUrl)}`} className="fw-bold text-decoration-none" style={{color: tenant.theme.primaryColor}}>
+                        <Link
+                            to={`/client-register?redirect=${encodeURIComponent(redirectUrl)}`}
+                            className="fw-bold text-decoration-none"
+                            style={{color: tenant.theme.primaryColor}}
+                        >
                             Crear una cuenta de cliente
                         </Link>
                     </div>

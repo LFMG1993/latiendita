@@ -9,7 +9,8 @@ import {
     arrayRemove,
     getDocs,
     query,
-    where
+    where,
+    setDoc
 } from "firebase/firestore";
 import {db, auth} from "../firebase.js";
 import {updateProfile} from "firebase/auth";
@@ -211,17 +212,60 @@ export const getAllClients = async (): Promise<UserProfile[]> => {
 /**
  * Actualiza los saldos (créditos y deuda) y el estado de habilitación de crédito de un cliente.
  */
-export const updateClientFinancials = async (clientId: string, credits: number, debt: number, isCreditEnabled: boolean): Promise<void> => {
+export const updateClientFinancials = async (clientId: string, credits: number, debt: number, isCreditEnabled: boolean, creditLimit?: number): Promise<void> => {
     try {
         const userDocRef = doc(db, "users", clientId);
         await updateDoc(userDocRef, {
             credits,
             debt,
             isCreditEnabled,
+            creditLimit: creditLimit || 0,
             updatedAt: serverTimestamp()
         });
     } catch (error) {
         console.error("Error updating client financials:", error);
         throw new Error("No se pudo actualizar el saldo del cliente.");
+    }
+};
+
+export interface QuickClientData {
+    firstName: string;
+    lastName?: string;
+    phone?: string;
+    documentId?: string;
+}
+
+/**
+ * Crea un cliente rápido (offline) desde el POS sin necesidad de Auth
+ */
+export const createQuickClient = async (data: QuickClientData): Promise<UserProfile> => {
+    try {
+        const usersRef = collection(db, "users");
+        const newClientRef = doc(usersRef);
+        
+        const clientData: Partial<UserProfile> = {
+            firstName: data.firstName,
+            lastName: data.lastName || '',
+            role: 'client',
+            phone: data.phone || '',
+            documentId: data.documentId || '',
+            createdAt: serverTimestamp(),
+            iceCreamShopIds: [], // Se podría asociar a la tienda actual si se pasa el ID
+            isOfflineClient: true,
+            isCreditEnabled: true,
+            credits: 0,
+            debt: 0,
+            creditLimit: 0
+        };
+
+        await setDoc(newClientRef, clientData);
+        
+        return {
+            uid: newClientRef.id,
+            ...clientData
+        } as UserProfile;
+    } catch (error) {
+        console.error("Error al crear cliente rápido:", error);
+        throw new Error("No se pudo crear el cliente.");
     }
 };

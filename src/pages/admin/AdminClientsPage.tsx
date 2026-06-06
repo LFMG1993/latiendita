@@ -25,6 +25,7 @@ const AdminClientsPage: FC = () => {
     const [tempCredits, setTempCredits] = useState(0);
     const [tempDebt, setTempDebt] = useState(0);
     const [tempIsCreditEnabled, setTempIsCreditEnabled] = useState(false);
+    const [tempCreditLimit, setTempCreditLimit] = useState(0);
     const [updatingSaldos, setUpdatingSaldos] = useState(false);
 
     const loadData = async () => {
@@ -47,6 +48,7 @@ const AdminClientsPage: FC = () => {
         setTempCredits(client.credits || 0);
         setTempDebt(client.debt || 0);
         setTempIsCreditEnabled(!!client.isCreditEnabled);
+        setTempCreditLimit(client.creditLimit || 0);
         setLoadingOrders(true);
         setShowDetail(true);
         try {
@@ -65,10 +67,10 @@ const AdminClientsPage: FC = () => {
         if (!selectedClient?.uid) return;
         setUpdatingSaldos(true);
         try {
-            await updateClientFinancials(selectedClient.uid, tempCredits, tempDebt, tempIsCreditEnabled);
+            await updateClientFinancials(selectedClient.uid, tempCredits, tempDebt, tempIsCreditEnabled, tempCreditLimit);
             // Actualizar localmente
-            setClients(prev => prev.map(c => c.uid === selectedClient.uid ? {...c, credits: tempCredits, debt: tempDebt, isCreditEnabled: tempIsCreditEnabled} : c));
-            setSelectedClient(prev => prev ? {...prev, credits: tempCredits, debt: tempDebt, isCreditEnabled: tempIsCreditEnabled} : null);
+            setClients(prev => prev.map(c => c.uid === selectedClient.uid ? {...c, credits: tempCredits, debt: tempDebt, isCreditEnabled: tempIsCreditEnabled, creditLimit: tempCreditLimit} : c));
+            setSelectedClient(prev => prev ? {...prev, credits: tempCredits, debt: tempDebt, isCreditEnabled: tempIsCreditEnabled, creditLimit: tempCreditLimit} : null);
             alert("Cuenta actualizada correctamente");
         } catch (err) {
             alert("Error al actualizar saldos.");
@@ -125,15 +127,15 @@ const AdminClientsPage: FC = () => {
 
                                     <div className="row g-2 mb-3 text-center">
                                         <div className="col-6">
-                                            <div className="bg-success bg-opacity-10 rounded p-2">
-                                                <small className="text-muted d-block small-label text-uppercase">Crédito</small>
-                                                <span className="fw-bold text-success">{formatCurrency(client.credits || 0)}</span>
+                                            <div className="bg-danger bg-opacity-10 rounded p-2">
+                                                <small className="text-muted d-block small-label text-uppercase">Deuda (Fiado)</small>
+                                                <span className="fw-bold text-danger">{formatCurrency(client.debt || 0)}</span>
                                             </div>
                                         </div>
                                         <div className="col-6">
-                                            <div className="bg-danger bg-opacity-10 rounded p-2">
-                                                <small className="text-muted d-block small-label text-uppercase">Deuda</small>
-                                                <span className="fw-bold text-danger">{formatCurrency(client.debt || 0)}</span>
+                                            <div className="bg-info bg-opacity-10 rounded p-2">
+                                                <small className="text-muted d-block small-label text-uppercase">Límite</small>
+                                                <span className="fw-bold text-info">{client.creditLimit ? formatCurrency(client.creditLimit) : 'Sin Límite'}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -183,32 +185,32 @@ const AdminClientsPage: FC = () => {
                                                     <CashStack className="me-2 text-primary"/> Gestión de Saldos
                                                 </h5>
                                                 
-                                                <div className="mb-3">
-                                                    <label className="form-label small fw-bold text-muted">Abonos / Crédito a Favor</label>
-                                                    <div className="input-group mb-2">
-                                                        <span className="input-group-text bg-light">$</span>
-                                                        <input 
-                                                            type="number" 
-                                                            className="form-control" 
-                                                            value={tempCredits}
-                                                            onChange={(e) => setTempCredits(Number(e.target.value))}
-                                                        />
-                                                    </div>
-                                                    <small className="text-muted">Crédito disponible para futuras compras.</small>
-                                                </div>
-
                                                 <div className="mb-4">
                                                     <label className="form-label small fw-bold text-muted">Deuda Pendiente (Fiado)</label>
-                                                    <div className="input-group mb-2">
-                                                        <span className="input-group-text bg-light">$</span>
+                                                    <div className="input-group mb-2 shadow-sm">
+                                                        <span className="input-group-text bg-body-secondary border-secondary-subtle text-body">$</span>
                                                         <input 
                                                             type="number" 
-                                                            className="form-control" 
+                                                            className="form-control border-secondary-subtle bg-body" 
                                                             value={tempDebt}
                                                             onChange={(e) => setTempDebt(Number(e.target.value))}
                                                         />
                                                     </div>
                                                     <small className="text-muted text-danger">Monto que el cliente debe a la tienda.</small>
+                                                </div>
+
+                                                <div className="mb-4">
+                                                    <label className="form-label small fw-bold text-muted">Límite de Crédito (Máximo Permitido)</label>
+                                                    <div className="input-group mb-2 shadow-sm">
+                                                        <span className="input-group-text bg-body-secondary border-secondary-subtle text-body">$</span>
+                                                        <input 
+                                                            type="number" 
+                                                            className="form-control border-secondary-subtle bg-body" 
+                                                            value={tempCreditLimit}
+                                                            onChange={(e) => setTempCreditLimit(Number(e.target.value))}
+                                                        />
+                                                    </div>
+                                                    <small className="text-muted">Dejar en 0 para crédito ilimitado.</small>
                                                 </div>
 
                                                 <div className="form-check form-switch mb-4">
@@ -266,7 +268,7 @@ const AdminClientsPage: FC = () => {
                                                 ) : clientOrders.length > 0 ? (
                                                     <div className="table-responsive">
                                                         <table className="table table-hover align-middle">
-                                                            <thead className="table-light small text-uppercase">
+                                                            <thead className="small text-uppercase text-secondary border-bottom">
                                                                 <tr>
                                                                     <th>ID / Fecha</th>
                                                                     <th>Estado</th>

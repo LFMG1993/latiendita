@@ -26,7 +26,7 @@ export const getProducts = async (heladeriaId: string): Promise<Product[]> => {
 export const addProduct = async (heladeriaId: string, productData: NewProductData): Promise<Product> => {
     const docRef = await addDoc(getProductsCollection(heladeriaId), {
         ...productData,
-        createdAt: serverTimestamp(),
+        createdAt: new Date().toISOString(),
     });
     return {id: docRef.id, ...productData, createdAt: new Date()} as unknown as Product;
 };

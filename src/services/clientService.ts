@@ -6,6 +6,7 @@ export interface ClientFinancials {
     credits: number;
     debt: number;
     isCreditEnabled: boolean;
+    creditLimit?: number;
 }
 
 export const getClientFinancials = async (clientId: string): Promise<ClientFinancials> => {
@@ -18,7 +19,8 @@ export const getClientFinancials = async (clientId: string): Promise<ClientFinan
             return {
                 credits: data.credits || 0,
                 debt: data.debt || 0,
-                isCreditEnabled: !!data.isCreditEnabled
+                isCreditEnabled: !!data.isCreditEnabled,
+                creditLimit: data.creditLimit
             };
         }
         return { credits: 0, debt: 0, isCreditEnabled: false };

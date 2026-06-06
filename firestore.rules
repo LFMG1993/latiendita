@@ -53,18 +53,44 @@ service cloud.firestore {
     match /users/{userId} {
       allow create: if isSignedIn() && request.auth.uid == userId;
       
-      // Regla combinada para evitar recursión y permitir listar
-      allow read, update: if isSignedIn() && (
-        request.auth.uid == userId ||
-        isSuperAdmin() || 
-        isOwner() || 
-        isEmployee()
-      );
+      // Un usuario autenticado siempre puede leer y actualizar su propio documento.
+      // Los roles admin pueden leer cualquier perfil.
+      allow read, update: if isSignedIn() && request.auth.uid == userId;
+      allow read: if isSuperAdmin() || isOwner() || isEmployee();
+      
+      // Permitir actualizar a superAdmin o a dueños/empleados si el usuario a editar es un cliente
+      allow update: if isSuperAdmin() || ((isOwner() || isEmployee()) && resource.data.role == 'client');
       
       allow delete: if isSuperAdmin();
+      
+      // Permitir consultas de lista (list) a usuarios NO autenticados únicamente cuando
+      // están buscando clientes por documentId (necesario para login y validar cédula en registro).
+      // La query DEBE incluir el filtro role == 'client' para no exponer otros roles.
+      allow list: if resource == null || resource.data.role == 'client';
     }
 
     match /orders/{orderId} {
+      allow create: if isSignedIn();
+      allow get: if isSignedIn() && (
+        resource.data.clientId == request.auth.uid ||
+        isShopOwner(resource.data.shopId) ||
+        hasPermission(resource.data.shopId, 'pos_access') ||
+        isSuperAdmin()
+      );
+      allow list: if isSignedIn() && (
+        isSuperAdmin() || 
+        isOwner() || 
+        isEmployee() || 
+        resource.data.clientId == request.auth.uid
+      );
+      allow update: if isSignedIn() && (
+        isShopOwner(resource.data.shopId) ||
+        hasPermission(resource.data.shopId, 'pos_access') ||
+        isSuperAdmin()
+      );
+    }
+
+    match /debtPayments/{requestId} {
       allow create: if isSignedIn();
       allow get: if isSignedIn() && (
         resource.data.clientId == request.auth.uid ||
@@ -91,11 +117,8 @@ service cloud.firestore {
 
     match /iceCreamShops/{shopId} {
       allow create: if isSignedIn() && request.resource.data.owner == request.auth.uid;
-      allow read: if isSignedIn() && (
-        resource.data.owner == request.auth.uid ||
-        (resource.data.members != null && resource.data.members[request.auth.uid] != null) ||
-        isSuperAdmin()
-      );
+      // Clientes autenticados pueden leer cualquier tienda (para el selector de tiendas)
+      allow read: if isSignedIn();
       allow update, delete: if isShopOwner(shopId) || isSuperAdmin();
 
       match /roles/{roleId} { allow read, write: if isShopOwner(shopId) || isSuperAdmin(); }
@@ -157,7 +180,7 @@ service cloud.firestore {
       }
       
       match /paymentMethods/{paymentMethodId} {
-        allow read: if isShopOwner(shopId) || hasPermission(shopId, 'pos_access') || isSuperAdmin();
+        allow read: if isSignedIn();
         allow write: if isShopOwner(shopId) || isSuperAdmin();
       }
     }

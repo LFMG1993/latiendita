@@ -8,9 +8,14 @@ import {NewPaymentMethodData, PaymentMethod, UpdatePaymentMethodData} from "../t
  */
 export const getActivePaymentMethods = async (heladeriaId: string): Promise<PaymentMethod[]> => {
     const methodsRef = collection(db, "iceCreamShops", heladeriaId, "paymentMethods");
-    const q = query(methodsRef, where("enabled", "==", true), orderBy("name", "asc"));
+    // Sin orderBy para evitar requerir un índice compuesto. Ordenamos en memoria.
+    const q = query(methodsRef);
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}) as PaymentMethod);
+    const allMethods = querySnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}) as PaymentMethod);
+    // Filtrar solo los habilitados, ordenar por nombre en memoria
+    return allMethods
+        .filter(m => m.enabled === true)
+        .sort((a, b) => a.name.localeCompare(b.name));
 };
 
 /**

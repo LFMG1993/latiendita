@@ -7,6 +7,7 @@ export interface UserProfile {
     lastName: string;
     email: string;
     identify: string;
+    documentId?: string; // Cédula/Documento de identidad único para clientes
     phone: string;
     role?: 'owner' | 'employee' | 'superAdmin' | 'client';
     roleId?: string;
@@ -19,6 +20,7 @@ export interface UserProfile {
     credits?: number; // Saldo a favor
     debt?: number;    // Saldo en contra (Deuda)
     isCreditEnabled?: boolean; // Si el admin habilitó crédito para este cliente
+    creditLimit?: number; // Límite máximo de deuda permitida
 }
 
 // El "contrato" para los datos del formulario de registro.

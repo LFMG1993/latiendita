@@ -1,6 +1,6 @@
 import {auth, db} from "../firebase.js";
 import {createUserWithEmailAndPassword, updateProfile, User, deleteUser} from "firebase/auth";
-import {doc, collection, writeBatch, serverTimestamp,} from "firebase/firestore";
+import {doc, collection, writeBatch, serverTimestamp, query, where, getDocs} from "firebase/firestore";
 import {RegisterFormData} from "../types";
 
 /**
@@ -83,6 +83,7 @@ export interface ClientRegisterData {
     email: string;
     password: string;
     phone: string;
+    documentId: string; // Cédula / Documento de identidad
     shopId?: string; // Tienda desde la que se registra
 }
 
@@ -93,6 +94,12 @@ export interface ClientRegisterData {
 export const registerClient = async (formData: ClientRegisterData): Promise<User> => {
     let user: User | null = null;
     try {
+        // 0. Verificar si la cédula ya está registrada para algún cliente en Firestore
+        const existingEmail = await getClientEmailByDocumentId(formData.documentId);
+        if (existingEmail) {
+            throw new Error('Este documento de identidad ya está registrado.');
+        }
+
         // 1. Crear Auth User
         const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
         user = userCredential.user;
@@ -105,6 +112,7 @@ export const registerClient = async (formData: ClientRegisterData): Promise<User
             email: formData.email,
             role: 'client', // Rol específico para clientes
             phone: formData.phone,
+            documentId: formData.documentId, // Guardamos la cédula
             createdAt: serverTimestamp(),
             iceCreamShopIds: formData.shopId ? [formData.shopId] : [] // Asociamos tienda inicial si existe
         };
@@ -117,7 +125,11 @@ export const registerClient = async (formData: ClientRegisterData): Promise<User
         });
 
         return user;
-    } catch (err) {
+    } catch (err: any) {
+        if (err.message === 'Este documento de identidad ya está registrado.') {
+            throw err;
+        }
+
         if (user) {
             await deleteUser(user);
              console.log('Usuario de Auth revertido (Client) debido a un fallo en la creación de documentos.');
@@ -130,5 +142,22 @@ export const registerClient = async (formData: ClientRegisterData): Promise<User
         if (error.code === 'auth/invalid-email') throw new Error('El formato del correo electrónico no es válido.');
         
         throw new Error('Ocurrió un error inesperado al registrar el cliente.');
+    }
+};
+
+/**
+ * Busca el correo electrónico de un cliente en Firestore usando su número de documento.
+ * Retorna el email si lo encuentra, o null si no existe.
+ */
+export const getClientEmailByDocumentId = async (documentId: string): Promise<string | null> => {
+    try {
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where('role', '==', 'client'), where('documentId', '==', documentId.trim()));
+        const snap = await getDocs(q);
+        if (snap.empty) return null;
+        return snap.docs[0].data().email as string;
+    } catch (err) {
+        console.error('Error buscando cliente por documento:', err);
+        return null;
     }
 };

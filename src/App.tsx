@@ -11,6 +11,7 @@ import ClientRegisterPage from "./pages/public/ClientRegisterPage.tsx";
 import ClientDashboardPage from "./pages/public/ClientDashboardPage.tsx";
 import AdminOrdersPage from "./pages/admin/AdminOrdersPage.tsx";
 import AdminClientsPage from "./pages/admin/AdminClientsPage.tsx";
+import AdminDebtPaymentsPage from "./pages/admin/AdminDebtPaymentsPage.tsx";
 import DashboardPage from "./pages/admin/DashboardPage.tsx";
 import IngredientsPage from "./pages/admin/IngredientsPage.tsx";
 import {auth} from './firebase';
@@ -142,6 +143,8 @@ const App: FC = () => {
                 navigate('/dashboard', {replace: true});
             } else if (user.role === 'superAdmin') {
                 navigate('/super-admin', {replace: true});
+            } else if (user.role === 'client') {
+                navigate('/client/dashboard', {replace: true});
             }
             setInitialRedirectDone(true); // Marcamos que la redirección ya se hizo.
         }
@@ -173,6 +176,9 @@ const App: FC = () => {
                 <Route path="/clients"
                        element={<ProtectedRoute
                            requiredPermission="pos_access"><MainLayout><AdminClientsPage/></MainLayout></ProtectedRoute>}/>
+                <Route path="/debt-payments"
+                       element={<ProtectedRoute
+                           requiredPermission="pos_access"><MainLayout><AdminDebtPaymentsPage/></MainLayout></ProtectedRoute>}/>
                 <Route path="/ingredients-page"
                        element={<ProtectedRoute
                            requiredPermission="ingredients_view"><MainLayout><IngredientsPage/></MainLayout></ProtectedRoute>}/>

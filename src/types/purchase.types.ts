@@ -15,7 +15,9 @@ export interface PurchasePayload {
 
 // Define la estructura de un solo ítem dentro de una compra.
 export interface PurchaseItem {
-    ingredientId: string;
+    itemType?: 'ingredient' | 'product';
+    ingredientId?: string;
+    productId?: string;
     name: string;
     purchaseUnit: string;
     quantity: number;

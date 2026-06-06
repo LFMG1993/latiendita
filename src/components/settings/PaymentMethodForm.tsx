@@ -13,6 +13,7 @@ const PaymentMethodForm: FC<PaymentMethodFormProps> = ({shopId, onFormSubmit, me
         name: '',
         type: 'cash',
         enabled: true,
+        accountDetails: ''
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -23,9 +24,10 @@ const PaymentMethodForm: FC<PaymentMethodFormProps> = ({shopId, onFormSubmit, me
                 name: methodToEdit.name,
                 type: methodToEdit.type,
                 enabled: methodToEdit.enabled,
+                accountDetails: methodToEdit.accountDetails || ''
             });
         } else {
-            setFormData({name: '', type: 'cash', enabled: true});
+            setFormData({name: '', type: 'cash', enabled: true, accountDetails: ''});
         }
     }, [methodToEdit]);
 
@@ -40,10 +42,15 @@ const PaymentMethodForm: FC<PaymentMethodFormProps> = ({shopId, onFormSubmit, me
         setError(null);
 
         try {
+            const dataToSave = { ...formData };
+            if (dataToSave.type !== 'electronic') {
+                delete dataToSave.accountDetails; // Solo guardar detalles de cuenta para electrónicos
+            }
+
             if (methodToEdit) {
-                await updatePaymentMethod(shopId, methodToEdit.id, formData);
+                await updatePaymentMethod(shopId, methodToEdit.id, dataToSave);
             } else {
-                await addPaymentMethod(shopId, formData);
+                await addPaymentMethod(shopId, dataToSave);
             }
             onFormSubmit();
         } catch (err: any) {
@@ -66,8 +73,18 @@ const PaymentMethodForm: FC<PaymentMethodFormProps> = ({shopId, onFormSubmit, me
                 <select id="type" name="type" className="form-select" value={formData.type} onChange={handleChange}>
                     <option value="cash">Efectivo (Afecta la caja)</option>
                     <option value="electronic">Electrónico (No afecta la caja)</option>
+                    <option value="credit">Crédito / Fiado (Genera deuda al cliente)</option>
                 </select>
             </div>
+            {formData.type === 'electronic' && (
+                <div className="mb-3">
+                    <label htmlFor="accountDetails" className="form-label">Detalles de la cuenta (Opcional)</label>
+                    <input type="text" id="accountDetails" name="accountDetails" className="form-control" 
+                           value={formData.accountDetails || ''} onChange={handleChange} 
+                           placeholder="Ej: Número Nequi: 3123456789"/>
+                    <small className="form-text text-muted">El cliente verá este dato al momento de pagar.</small>
+                </div>
+            )}
             <div className="form-check mb-3">
                 <input className="form-check-input" type="checkbox" id="enabled" name="enabled"
                        checked={formData.enabled} onChange={handleChange}/>

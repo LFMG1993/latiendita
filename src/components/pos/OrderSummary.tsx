@@ -1,6 +1,6 @@
 import {FC, useMemo} from "react";
 import {SaleItem, Ingredient} from "../../types";
-import {Trash, PlusCircle, DashCircle} from "react-bootstrap-icons";
+import {Trash, PlusCircle, DashCircle, CartX, Cart3} from "react-bootstrap-icons";
 
 interface OrderSummaryProps {
     orderItems: SaleItem[];
@@ -9,7 +9,6 @@ interface OrderSummaryProps {
     onProceedToPayment: () => void;
 }
 
-// Función de ayuda para formatear moneda
 const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('es-CO', {style: 'currency', currency: 'COP', maximumFractionDigits: 0}).format(value);
 };
@@ -18,65 +17,152 @@ const OrderSummary: FC<OrderSummaryProps> = ({orderItems, ingredients, onUpdateQ
     const ingredientsMap = useMemo(() => new Map(ingredients.map(ing => [ing.id, ing])), [ingredients]);
 
     const total = orderItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+    const totalItems = orderItems.reduce((sum, item) => sum + item.quantity, 0);
+    const isEmpty = orderItems.length === 0;
 
     return (
-        <div className="card shadow-sm">
-            <div className="card-header">
-                <h5 className="mb-0">Resumen del Pedido</h5>
-            </div>
-            <div className="card-body" style={{minHeight: '60vh'}}>
-                {orderItems.length === 0 ? (
-                    <p className="text-muted text-center mt-4">Selecciona productos para iniciar una venta.</p>
-                ) : (
-                    <ul className="list-group list-group-flush">
-                        {orderItems.map((item) => (
-                            <li key={item.id} className="list-group-item px-0">
-                                <div className="d-flex justify-content-between">
-                                    <div>
-                                        <h6 className="mb-0">{item.productName}</h6>
-                                        <small className="text-muted">{formatCurrency(item.unitPrice)} c/u</small>
-                                        {/* Mostramos los sabores seleccionados */}
-                                        <div className="ps-2">
-                                            {item.ingredientsUsed
-                                                .filter(usage => ingredientsMap.get(usage.ingredientId)?.category === 'Helados')
-                                                .map(usage => (
-                                                    <div key={usage.ingredientId} className="text-muted small">
-                                                        - {ingredientsMap.get(usage.ingredientId)?.name}
-                                                    </div>
-                                                ))
-                                            }
-                                        </div>
-                                    </div>
-                                    <div className="fw-bold">{formatCurrency(item.unitPrice * item.quantity)}</div>
-                                </div>
-                                <div className="d-flex align-items-center justify-content-end mt-1">
-                                    <DashCircle className="text-danger me-2 action-icon"
-                                                onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}/>
-                                    <span className="fw-bold mx-2">{item.quantity}</span>
-                                    <PlusCircle className="text-success me-2 action-icon"
-                                                onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}/>
-                                    <Trash className="text-danger action-icon"
-                                           onClick={() => onUpdateQuantity(item.id, 0)}/>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
+        <div
+            className="card border-0 shadow"
+            style={{borderRadius: '16px', overflow: 'hidden'}}
+        >
+            {/* Header */}
+            <div
+                className="card-header border-0 d-flex align-items-center justify-content-between px-4 py-3"
+                style={{background: 'var(--bs-body-bg)'}}
+            >
+                <div className="d-flex align-items-center gap-2">
+                    <Cart3 size={20} className="text-primary"/>
+                    <h5 className="mb-0 fw-bold">Pedido Actual</h5>
+                </div>
+                {!isEmpty && (
+                    <span
+                        className="badge rounded-pill bg-primary"
+                        style={{fontSize: '0.75rem'}}
+                    >
+                        {totalItems} {totalItems === 1 ? 'ítem' : 'ítems'}
+                    </span>
                 )}
             </div>
-            <div className="card-footer">
-                <div className="d-flex justify-content-between fs-5 fw-bold mb-3">
-                    <span>Total:</span>
-                    <span>{formatCurrency(total)}</span>
-                </div>
-                <div className="d-grid">
-                    <button
-                        className="btn btn-success btn-lg"
-                        onClick={onProceedToPayment}
-                        disabled={orderItems.length === 0}
+
+            {/* Body */}
+            <div
+                className="card-body p-0 bg-body"
+                style={{minHeight: '55vh', maxHeight: '60vh', overflowY: 'auto'}}
+            >
+                {isEmpty ? (
+                    <div
+                        className="d-flex flex-column align-items-center justify-content-center text-center h-100 py-5 px-4"
+                        style={{minHeight: '300px'}}
                     >
-                        Cobrar
-                    </button>
+                        <div
+                            className="rounded-circle bg-body-secondary d-flex align-items-center justify-content-center mb-3"
+                            style={{width: '72px', height: '72px'}}
+                        >
+                            <CartX size={32} className="text-secondary opacity-50"/>
+                        </div>
+                        <p className="text-muted fw-medium mb-1">Pedido vacío</p>
+                        <p className="text-muted small opacity-75">Selecciona productos del menú para comenzar.</p>
+                    </div>
+                ) : (
+                    <div className="px-3 py-2">
+                        {orderItems.map((item, index) => (
+                            <div
+                                key={item.id}
+                                className="py-3"
+                                style={{
+                                    borderBottom: index < orderItems.length - 1 ? '1px solid var(--bs-border-color-translucent)' : 'none'
+                                }}
+                            >
+                                <div className="d-flex justify-content-between align-items-start mb-2">
+                                    <div className="flex-grow-1 me-2">
+                                        <div className="fw-semibold text-body" style={{fontSize: '0.9rem', lineHeight: 1.3}}>
+                                            {item.productName}
+                                        </div>
+                                        <div className="text-muted" style={{fontSize: '0.78rem'}}>
+                                            {formatCurrency(item.unitPrice)} c/u
+                                        </div>
+                                        {/* Sabores/ingredientes */}
+                                        {item.ingredientsUsed
+                                            .filter(usage => ingredientsMap.get(usage.ingredientId)?.category === 'Helados')
+                                            .map(usage => (
+                                                <div
+                                                    key={usage.ingredientId}
+                                                    className="text-muted d-flex align-items-center gap-1 mt-1"
+                                                    style={{fontSize: '0.76rem'}}
+                                                >
+                                                    <span className="text-primary">•</span>
+                                                    {ingredientsMap.get(usage.ingredientId)?.name}
+                                                </div>
+                                            ))
+                                        }
+                                    </div>
+                                    <div className="fw-bold text-body" style={{fontSize: '0.9rem', whiteSpace: 'nowrap'}}>
+                                        {formatCurrency(item.unitPrice * item.quantity)}
+                                    </div>
+                                </div>
+
+                                {/* Controles cantidad */}
+                                <div className="d-flex align-items-center justify-content-end gap-2">
+                                    <button
+                                        className="btn btn-sm btn-outline-danger rounded-circle p-0 d-flex align-items-center justify-content-center"
+                                        style={{width: '28px', height: '28px', border: 'none'}}
+                                        onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+                                        title="Reducir"
+                                    >
+                                        <DashCircle size={18}/>
+                                    </button>
+                                    <span
+                                        className="fw-bold text-center bg-body-secondary rounded"
+                                        style={{minWidth: '32px', fontSize: '0.9rem', padding: '2px 8px'}}
+                                    >
+                                        {item.quantity}
+                                    </span>
+                                    <button
+                                        className="btn btn-sm btn-outline-success rounded-circle p-0 d-flex align-items-center justify-content-center"
+                                        style={{width: '28px', height: '28px', border: 'none'}}
+                                        onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                                        title="Aumentar"
+                                    >
+                                        <PlusCircle size={18}/>
+                                    </button>
+                                    <button
+                                        className="btn btn-sm p-0 d-flex align-items-center justify-content-center ms-1"
+                                        style={{width: '28px', height: '28px', border: 'none', color: 'var(--bs-danger)', opacity: 0.7}}
+                                        onClick={() => onUpdateQuantity(item.id, 0)}
+                                        title="Eliminar"
+                                    >
+                                        <Trash size={15}/>
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Footer */}
+            <div
+                className="card-footer border-0 px-4 py-3"
+                style={{background: 'var(--bs-body-bg)'}}
+            >
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                    <span className="text-muted fw-medium">Total</span>
+                    <span className="fw-bold fs-4 text-body">{formatCurrency(total)}</span>
                 </div>
+                <button
+                    className="btn btn-success w-100 fw-bold py-3 shadow-sm d-flex align-items-center justify-content-center gap-2"
+                    style={{
+                        borderRadius: '12px',
+                        fontSize: '1rem',
+                        opacity: isEmpty ? 0.6 : 1,
+                        transition: 'all 0.2s ease',
+                    }}
+                    onClick={onProceedToPayment}
+                    disabled={isEmpty}
+                >
+                    <Cart3 size={20}/>
+                    Cobrar — {formatCurrency(total)}
+                </button>
             </div>
         </div>
     );

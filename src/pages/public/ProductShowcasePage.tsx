@@ -43,6 +43,8 @@ const ProductShowcaseContent: FC<{targetShopId: string | null, DEFAULT_SHOP_ID: 
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<'cash' | 'credit'>('cash');
     const [isCreditEnabled, setIsCreditEnabled] = useState(false);
+    const [creditLimit, setCreditLimit] = useState(0);
+    const [currentDebt, setCurrentDebt] = useState(0);
     
     // Auth
     const {isAuthenticated, user} = useAuthStore();
@@ -86,12 +88,30 @@ const ProductShowcaseContent: FC<{targetShopId: string | null, DEFAULT_SHOP_ID: 
         if (isAuthenticated && user?.uid) {
             getClientFinancials(user.uid).then(fin => {
                 setIsCreditEnabled(fin.isCreditEnabled);
+                setCreditLimit(fin.creditLimit || 0);
+                setCurrentDebt(fin.debt || 0);
             }).catch(console.error);
         }
     }, [isAuthenticated, user?.uid]);
 
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('es-CO', {
+            style: 'currency',
+            currency: 'COP',
+            minimumFractionDigits: 0
+        }).format(amount);
+    };
+
     const handleCheckout = async () => {
         if (isAuthenticated && user) {
+            if (paymentMethod === 'credit' && creditLimit > 0) {
+                const newDebt = currentDebt + totalAmount;
+                if (newDebt > creditLimit) {
+                    alert(`¡Cupo de crédito excedido!\n\nTu límite de crédito es de ${formatCurrency(creditLimit)} y tu deuda actual es de ${formatCurrency(currentDebt)}.\nEste pedido por ${formatCurrency(totalAmount)} supera tu cupo disponible.`);
+                    return;
+                }
+            }
+
             try {
                 // 1. Preparar datos del pedido
                 const orderData: NewOrderData = {

@@ -31,6 +31,7 @@ export const navItemsConfig: NavItemConfig[] = [
     {to: "/pos", Icon: Cart3, label: "Punto de Venta", permissionId: 'pos_access', category: 'sales', isMobilePrimary: true},
     {to: "/orders", Icon: Receipt, label: "Pedidos Online", permissionId: 'pos_access', category: 'sales', isMobilePrimary: true},
     {to: "/clients", Icon: People, label: "Clientes y Créditos", permissionId: 'pos_access', category: 'sales'},
+    {to: "/debt-payments", Icon: CashCoin, label: "Abonos a Deudas", permissionId: 'pos_access', category: 'sales'},
     {to: "/cash-session", Icon: CashCoin, label: "Caja", permissionId: 'cash_session_access', category: 'sales'},
     
     {to: "/products", Icon: Tags, label: "Productos", permissionId: 'products_view', category: 'inventory'},

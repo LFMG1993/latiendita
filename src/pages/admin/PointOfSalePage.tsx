@@ -307,13 +307,25 @@ const PointOfSalePage: FC = () => {
             total,
             employeeId: user.uid,
             employeeName: user.firstName || user.email,
-            clientId: pendingDebt > 0 ? clientId : undefined,
-            clientName: pendingDebt > 0 ? clientName : undefined,
+            clientId: clientId || undefined,
+            clientName: clientName || undefined,
             pendingDebt: pendingDebt > 0 ? pendingDebt : undefined
         };
 
         try {
             await registerSale(heladeriaId, saleData);
+
+            // Si hubo pago a crédito, actualizamos la deuda del cliente en memoria
+            // para que la siguiente validación tenga el valor correcto
+            if (pendingDebt > 0 && clientId) {
+                setClients(prev => prev.map(c => {
+                    if (c.uid === clientId) {
+                        return { ...c, debt: (c.debt || 0) + pendingDebt };
+                    }
+                    return c;
+                }));
+            }
+
             alert('¡Venta registrada con éxito!');
             handleCloseOrder(activeOrderId);
             setIsPaymentModalOpen(false);
@@ -464,6 +476,10 @@ const PointOfSalePage: FC = () => {
                     clients={clients}
                     selectedClientId={selectedClientId}
                     onSelectClient={setSelectedClientId}
+                    onClientCreated={(newClient) => {
+                        setClients(prev => [...prev, newClient]);
+                        setSelectedClientId(newClient.uid || '');
+                    }}
                     onConfirmPayment={handleProcessPayment}
                 />
             </div>

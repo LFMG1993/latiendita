@@ -20,6 +20,7 @@ interface CloseCashSessionFormProps {
 }
 
 const CloseCashSessionForm: FC<CloseCashSessionFormProps> = ({onSubmit, loading, sessionTotals, openingBalance}) => {
+    console.log("CloseCashSessionForm props:", { openingBalance: openingBalance, typeOrder: typeof openingBalance, sessionTotals });
     const [closingBalance, setClosingBalance] = useState<string>('');
     const [notes, setNotes] = useState<string>('');
 
@@ -36,7 +37,15 @@ const CloseCashSessionForm: FC<CloseCashSessionFormProps> = ({onSubmit, loading,
 
     const expectedCashInBox = useMemo(() => {
         // El efectivo esperado es la base + ventas en efectivo - todos los gastos pagados con la caja.
-        return openingBalance + sessionTotals.cashSales - sessionTotals.totalPurchaseExpenses - sessionTotals.totalOperationalExpenses;
+        const base = Number(openingBalance);
+        const sales = Number(sessionTotals.cashSales);
+        const purchases = Number(sessionTotals.totalPurchaseExpenses);
+        const expenses = Number(sessionTotals.totalOperationalExpenses);
+        
+        console.log("Calculando expectedCashInBox:", { base, sales, purchases, expenses });
+        console.log("Resultado suma:", base + sales - purchases - expenses);
+        
+        return base + sales - purchases - expenses;
     }, [openingBalance, sessionTotals.cashSales, sessionTotals.totalPurchaseExpenses, sessionTotals.totalOperationalExpenses]);
 
     const difference = useMemo(() => {

@@ -28,6 +28,9 @@ const PaymentMethodsTable: FC<PaymentMethodsTableProps> = ({methods, onEdit, onD
                             <span className={`badge ${method.type === 'cash' ? 'bg-success' : 'bg-info'}`}>
                                 {method.type === 'cash' ? 'Efectivo' : 'Electrónico'}
                             </span>
+                            {method.accountDetails && (
+                                <div className="text-muted small mt-1">{method.accountDetails}</div>
+                            )}
                         </td>
                         <td><span className={`badge ${method.enabled ? 'bg-primary' : 'bg-secondary'}`}>{method.enabled ? 'Activo' : 'Inactivo'}</span></td>
                         <td><ActionButtons onEdit={() => onEdit(method)} onDelete={() => onDelete(method.id)}/></td>

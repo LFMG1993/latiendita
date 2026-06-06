@@ -28,13 +28,18 @@ export const registerSale = async (heladeriaId: string, saleData: NewSaleData): 
         createdAt: serverTimestamp(),
     });
 
-    // 2. Por cada ítem en la venta, descontar el stock de los ingredientes utilizados
+    // 2. Por cada ítem en la venta, descontar el stock de los ingredientes utilizados o del producto
     saleData.items.forEach(item => {
-        item.ingredientsUsed.forEach(usage => {
-            const ingredientRef = doc(db, "iceCreamShops", heladeriaId, "ingredientes", usage.ingredientId);
-            const totalQuantityToDecrement = usage.quantity * item.quantity;
-            batch.update(ingredientRef, {stock: increment(-totalQuantityToDecrement)});
-        });
+        if (!item.ingredientsUsed || item.ingredientsUsed.length === 0) {
+            const productRef = doc(db, "iceCreamShops", heladeriaId, "productos", item.productId);
+            batch.update(productRef, {stock: increment(-item.quantity)});
+        } else {
+            item.ingredientsUsed.forEach(usage => {
+                const ingredientRef = doc(db, "iceCreamShops", heladeriaId, "ingredientes", usage.ingredientId);
+                const totalQuantityToDecrement = usage.quantity * item.quantity;
+                batch.update(ingredientRef, {stock: increment(-totalQuantityToDecrement)});
+            });
+        }
     });
 
     // 3. Si hay deuda pendiente y un cliente identificado, sumar a su cuenta

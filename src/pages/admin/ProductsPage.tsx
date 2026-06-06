@@ -46,7 +46,7 @@ const ProductsPage: FC = () => {
 
     // --- Lógica para enriquecer los productos con datos calculados ---
     const enrichedProducts = useMemo((): EnrichedProduct[] => {
-        if (!products.length || !ingredients.length) return [];
+        if (!products.length) return [];
 
         const ingredientsMap = new Map(ingredients.map(ing => [ing.id, ing]));
 
@@ -61,7 +61,7 @@ const ProductsPage: FC = () => {
         });
 
         return products.map(product => {
-            const recipeCost = product.recipe.reduce((totalCost, item) => {
+            const recipeCost = (product.recipe || []).reduce((totalCost, item) => {
                 if (item.ingredientId.startsWith('CATEGORY::')) {
                     const category = item.ingredientId.split('::')[1];
                     const ingredientsInCategory = ingredients.filter(ing => ing.category === category);
@@ -86,25 +86,30 @@ const ProductsPage: FC = () => {
                 }
             }, 0);
 
-            // Calcular cuántas unidades se pueden hacer (el cuello de botella)
-            const unitsPerIngredient = product.recipe.map(item => {
-                // Si el ingrediente es variable, no limita la producción en esta vista.
-                if (item.ingredientId.startsWith('CATEGORY::')) return Infinity;
+            // Calcular cuántas unidades se pueden hacer (el cuello de botella) o usar el stock directo
+            let availableUnits = 0;
+            if (product.recipe && product.recipe.length > 0) {
+                const unitsPerIngredient = product.recipe.map(item => {
+                    // Si el ingrediente es variable, no limita la producción en esta vista.
+                    if (item.ingredientId.startsWith('CATEGORY::')) return Infinity;
 
-                const ingredient = ingredientsMap.get(item.ingredientId);
-                if (!ingredient || !item.quantity) return Infinity;
+                    const ingredient = ingredientsMap.get(item.ingredientId);
+                    if (!ingredient || !item.quantity) return Infinity;
 
-                const totalStockInConsumptionUnits = ingredient.stock ?? 0;
-                return Math.floor(totalStockInConsumptionUnits / item.quantity);
-            });
-
-            const availableUnits = Math.min(...unitsPerIngredient);
+                    const totalStockInConsumptionUnits = ingredient.stock ?? 0;
+                    return Math.floor(totalStockInConsumptionUnits / item.quantity);
+                });
+                const minUnits = Math.min(...unitsPerIngredient);
+                availableUnits = isFinite(minUnits) ? minUnits : 0;
+            } else {
+                availableUnits = product.stock ?? 0;
+            }
 
             return {
                 ...product,
                 recipeCost,
                 estimatedProfit: product.price - recipeCost,
-                availableUnits: isFinite(availableUnits) ? availableUnits : 0,
+                availableUnits,
             };
         });
     }, [products, ingredients, purchases]);

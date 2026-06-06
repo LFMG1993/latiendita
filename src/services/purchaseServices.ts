@@ -61,11 +61,17 @@ export const addPurchase = async (heladeriaId: string, purchaseData: PurchasePay
             createdAt: serverTimestamp(),
         });
 
-        // 3. Actualizar el stock de cada ingrediente.
+        // 3. Actualizar el stock de cada ingrediente o producto.
         purchaseData.items.forEach(item => {
-            const ingredientRef = doc(db, "iceCreamShops", heladeriaId, "ingredientes", item.ingredientId);
-            const stockToAdd = item.quantity * item.consumptionUnitsPerPurchaseUnit;
-            transaction.update(ingredientRef, {stock: increment(stockToAdd)});
+            if (item.itemType === 'product' && item.productId) {
+                const productRef = doc(db, "iceCreamShops", heladeriaId, "productos", item.productId);
+                const stockToAdd = item.quantity;
+                transaction.update(productRef, {stock: increment(stockToAdd)});
+            } else if (item.ingredientId) {
+                const ingredientRef = doc(db, "iceCreamShops", heladeriaId, "ingredientes", item.ingredientId);
+                const stockToAdd = item.quantity * item.consumptionUnitsPerPurchaseUnit;
+                transaction.update(ingredientRef, {stock: increment(stockToAdd)});
+            }
         });
 
         // 4. Actualizar el contador en el documento del proveedor.
@@ -86,16 +92,26 @@ export const updatePurchase = async (heladeriaId: string, purchaseId: string, da
 
     // 1. Revertir el stock de los ítems antiguos
     oldData.items.forEach(item => {
-        const ingredientRef = doc(db, "iceCreamShops", heladeriaId, "ingredientes", item.ingredientId);
-        const stockToRevert = item.quantity * item.consumptionUnitsPerPurchaseUnit;
-        batch.update(ingredientRef, {stock: increment(-stockToRevert)});
+        if (item.itemType === 'product' && item.productId) {
+            const productRef = doc(db, "iceCreamShops", heladeriaId, "productos", item.productId);
+            batch.update(productRef, {stock: increment(-item.quantity)});
+        } else if (item.ingredientId) {
+            const ingredientRef = doc(db, "iceCreamShops", heladeriaId, "ingredientes", item.ingredientId);
+            const stockToRevert = item.quantity * item.consumptionUnitsPerPurchaseUnit;
+            batch.update(ingredientRef, {stock: increment(-stockToRevert)});
+        }
     });
 
     // 2. Añadir el stock de los nuevos ítems
     dataToUpdate.items?.forEach(item => {
-        const ingredientRef = doc(db, "iceCreamShops", heladeriaId, "ingredientes", item.ingredientId);
-        const stockToAdd = item.quantity * item.consumptionUnitsPerPurchaseUnit;
-        batch.update(ingredientRef, {stock: increment(stockToAdd)});
+        if (item.itemType === 'product' && item.productId) {
+            const productRef = doc(db, "iceCreamShops", heladeriaId, "productos", item.productId);
+            batch.update(productRef, {stock: increment(item.quantity)});
+        } else if (item.ingredientId) {
+            const ingredientRef = doc(db, "iceCreamShops", heladeriaId, "ingredientes", item.ingredientId);
+            const stockToAdd = item.quantity * item.consumptionUnitsPerPurchaseUnit;
+            batch.update(ingredientRef, {stock: increment(stockToAdd)});
+        }
     });
 
     // 3. Actualizar el documento de la compra
@@ -120,9 +136,14 @@ export const deletePurchase = async (heladeriaId: string, purchaseId: string) =>
 
     // 1. Revertir el stock de los ítems
     oldData.items.forEach(item => {
-        const ingredientRef = doc(db, "iceCreamShops", heladeriaId, "ingredientes", item.ingredientId);
-        const stockToRevert = item.quantity * item.consumptionUnitsPerPurchaseUnit;
-        batch.update(ingredientRef, {stock: increment(-stockToRevert)});
+        if (item.itemType === 'product' && item.productId) {
+            const productRef = doc(db, "iceCreamShops", heladeriaId, "productos", item.productId);
+            batch.update(productRef, {stock: increment(-item.quantity)});
+        } else if (item.ingredientId) {
+            const ingredientRef = doc(db, "iceCreamShops", heladeriaId, "ingredientes", item.ingredientId);
+            const stockToRevert = item.quantity * item.consumptionUnitsPerPurchaseUnit;
+            batch.update(ingredientRef, {stock: increment(-stockToRevert)});
+        }
     });
 
     // 2. Eliminar el documento de la compra

@@ -1,5 +1,5 @@
 import {useState, FC, FormEvent, ChangeEvent} from 'react';
-import {Link, useNavigate, useSearchParams} from 'react-router-dom';
+import {Link, useSearchParams} from 'react-router-dom';
 import {registerClient, ClientRegisterData} from '../../services/authServices';
 import '../../style/Register.css'; // Reutilizamos estilos
 import { useTenant } from '../../context/TenantContext';
@@ -10,17 +10,17 @@ const ClientRegisterPage: FC = () => {
         lastName: '',
         email: '',
         password: '',
-        phone: ''
+        phone: '',
+        documentId: ''
     });
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     
-    const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { tenant } = useTenant();
 
-    const redirectUrl = searchParams.get('redirect') || '/';
+    const redirectUrl = searchParams.get('redirect') || '/client/dashboard';
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         setFormData({...formData, [e.target.name]: e.target.value});
@@ -47,8 +47,7 @@ const ClientRegisterPage: FC = () => {
             }
 
             await registerClient({...formData, shopId});
-            // Registro exitoso -> Autologin implícito -> Redirigir
-            navigate(redirectUrl);
+            // Registro exitoso -> Autologin implícito -> Redirigir manejado por App.tsx
         } catch (err: any) {
             setError(err.message || "Error al registrarse.");
             setLoading(false);
@@ -96,20 +95,33 @@ const ClientRegisterPage: FC = () => {
                             </div>
                         </div>
 
-                         <div className="form-floating mb-3">
+                        <div className="form-floating mb-3">
                             <input
-                                type="email"
+                                type="text"
                                 className="form-control"
-                                id="email"
-                                name="email"
-                                placeholder="Email"
-                                value={formData.email}
+                                id="documentId"
+                                name="documentId"
+                                placeholder="Cédula"
+                                value={formData.documentId}
                                 onChange={handleChange}
                                 required
                             />
-                             <label htmlFor="email">Correo Electrónico</label>
+                            <label htmlFor="documentId">🗒️ Cédula / Documento de Identidad</label>
                         </div>
-                        
+
+                         <div className="form-floating mb-3">
+                             <input
+                                 type="email"
+                                 className="form-control"
+                                 id="email"
+                                 name="email"
+                                 placeholder="Email"
+                                 value={formData.email}
+                                 onChange={handleChange}
+                                 required
+                             />
+                              <label htmlFor="email">Correo Electrónico</label>
+                         </div>
                          <div className="form-floating mb-3">
                             <input
                                 type="tel"

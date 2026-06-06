@@ -1,8 +1,9 @@
 import {useState, useEffect, useRef, FC, ChangeEvent, FormEvent} from 'react';
 import {addPurchase, updatePurchase} from '../../services/purchaseServices';
 import {getIngredients} from '../../services/ingredientServices';
+import {getProducts} from '../../services/productServices';
 import Alert from '../general/Alert';
-import {Ingredient, Purchase, NewPurchaseData, PurchaseItem, Supplier, UpdatePurchaseData} from "../../types";
+import {Ingredient, Purchase, NewPurchaseData, PurchaseItem, Supplier, UpdatePurchaseData, Product} from "../../types";
 import {getSuppliers} from "../../services/supplierService";
 import Modal from "../general/Modal";
 import {useAuthStore} from "../../store/authStore";
@@ -22,7 +23,8 @@ interface FormDataState {
 }
 
 interface CurrentItemState {
-    ingredientId: string;
+    itemId: string;
+    itemType: 'ingredient' | 'product' | '';
     quantity: string;
     itemTotalCost: string;
     selectedUnit: string;
@@ -49,23 +51,29 @@ const AddPurchaseForm: FC<AddPurchaseFormProps> = ({onFormSubmit, heladeriaId, p
     const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
 
     // Estados para la selección de ítems individuales
-    const initialItemState: CurrentItemState = {ingredientId: '', quantity: '', itemTotalCost: '', selectedUnit: ''};
+    const initialItemState: CurrentItemState = {itemId: '', itemType: '', quantity: '', itemTotalCost: '', selectedUnit: ''};
     const [availableIngredients, setAvailableIngredients] = useState<Ingredient[]>([]);
+    const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
     const [currentItem, setCurrentItem] = useState<CurrentItemState>(initialItemState);
+    const [selectionType, setSelectionType] = useState<'ingredient' | 'product'>('ingredient');
+    const [purchaseMode, setPurchaseMode] = useState<'unit' | 'package'>('unit');
+    const [packageDetails, setPackageDetails] = useState({ numPackages: '', unitsPerPackage: '', pricePerUnit: '' });
     const ingredientSelectRef = useRef<HTMLSelectElement>(null);
 
-    // Cargar datos iniciales (ingredientes y proveedores)
+    // Cargar datos iniciales (ingredientes y proveedores y productos)
     const fetchData = async () => {
         try {
             // Usamos Promise.all para cargar ambos recursos en paralelo, mejorando la eficiencia.
-            const [ingredients, suppliers] = await Promise.all([
+            const [ingredients, suppliers, products] = await Promise.all([
                 getIngredients(heladeriaId),
-                getSuppliers(heladeriaId)
+                getSuppliers(heladeriaId),
+                getProducts(heladeriaId)
             ]);
             setAvailableIngredients(ingredients);
             setAvailableSuppliers(suppliers);
+            setAvailableProducts(products);
         } catch (err) {
-            setError('No se pudieron cargar los datos iniciales (ingredientes/proveedores).');
+            setError('No se pudieron cargar los datos iniciales (ingredientes/proveedores/productos).');
         }
     };
 
@@ -100,47 +108,120 @@ const AddPurchaseForm: FC<AddPurchaseFormProps> = ({onFormSubmit, heladeriaId, p
 
     const handleCurrentItemChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const {name, value} = e.target;
-        const updatedItem = {...currentItem, [name]: value};
-
-        if (name === 'ingredientId') {
-            const ingredient = availableIngredients.find(ing => ing.id === value);
-            updatedItem.selectedUnit = ingredient ? ingredient.purchaseUnit : '';
+        
+        if (name === 'itemSelection') {
+            if (!value) {
+                setCurrentItem({...currentItem, itemId: '', itemType: '', selectedUnit: ''});
+                return;
+            }
+            const [type, id] = value.split('::');
+            let unit = '';
+            if (type === 'ingredient') {
+                const ingredient = availableIngredients.find(ing => ing.id === id);
+                unit = ingredient ? ingredient.purchaseUnit : '';
+            } else if (type === 'product') {
+                unit = 'Unidad';
+            }
+            setCurrentItem({...currentItem, itemId: id, itemType: type as 'ingredient' | 'product', selectedUnit: unit});
+        } else {
+            setCurrentItem({...currentItem, [name]: value});
         }
-        setCurrentItem(updatedItem);
     };
 
     const handleAddItem = () => {
+        // --- Lógica de compra por PAQUETE para productos ---
+        if (selectionType === 'product' && purchaseMode === 'package') {
+            const numPackages = parseFloat(packageDetails.numPackages);
+            const unitsPerPackage = parseFloat(packageDetails.unitsPerPackage);
+            const pricePerUnit = parseFloat(packageDetails.pricePerUnit);
+
+            if (!currentItem.itemId || isNaN(numPackages) || numPackages <= 0 || isNaN(unitsPerPackage) || unitsPerPackage <= 0 || isNaN(pricePerUnit) || pricePerUnit <= 0) {
+                setError('Por favor, completa todos los campos del paquete con valores válidos.');
+                return;
+            }
+            if (formData.items.some(item => item.productId === currentItem.itemId)) {
+                setError('Este producto ya ha sido añadido a la compra.');
+                return;
+            }
+            const product = availableProducts.find(p => p.id === currentItem.itemId);
+            if (!product) { setError('Producto no válido.'); return; }
+
+            const totalUnits = numPackages * unitsPerPackage;
+            const totalCost = totalUnits * pricePerUnit;
+
+            const newItem: PurchaseItem = {
+                itemType: 'product',
+                name: `${product.name} (Paquete x${unitsPerPackage})`,
+                purchaseUnit: 'Unidad',
+                quantity: totalUnits,
+                unitCost: pricePerUnit,
+                consumptionUnitsPerPurchaseUnit: 1,
+            };
+            newItem.productId = currentItem.itemId;
+
+            setFormData(prev => ({ ...prev, items: [...prev.items, newItem] }));
+            setCurrentItem(initialItemState);
+            setPackageDetails({ numPackages: '', unitsPerPackage: '', pricePerUnit: '' });
+            setError('');
+            ingredientSelectRef.current?.focus();
+            return;
+        }
+
         const quantity = parseFloat(currentItem.quantity);
         const totalCost = parseFloat(currentItem.itemTotalCost);
 
-        if (!currentItem.ingredientId || isNaN(quantity) || quantity <= 0 || totalCost <= 0) {
-            setError('Por favor, selecciona un ingrediente y especifica cantidad y costo unitario válidos.');
+        if (!currentItem.itemId || isNaN(quantity) || quantity <= 0 || totalCost <= 0) {
+            setError('Por favor, selecciona un ítem y especifica cantidad y costo unitario válidos.');
             return;
         }
 
-        // Prevenir añadir el mismo ingrediente dos veces
-        if (formData.items.some(item => item.ingredientId === currentItem.ingredientId)) {
-            setError('Este ingrediente ya ha sido añadido a la compra. Puedes removerlo y volver a añadirlo si la cantidad es incorrecta.');
+        // Prevenir añadir el mismo ítem dos veces
+        if (formData.items.some(item => (item.ingredientId === currentItem.itemId && currentItem.itemType === 'ingredient') || (item.productId === currentItem.itemId && currentItem.itemType === 'product'))) {
+            setError('Este ítem ya ha sido añadido a la compra. Puedes removerlo y volver a añadirlo si la cantidad es incorrecta.');
             return;
         }
 
-        const ingredient = availableIngredients.find(ing => ing.id === currentItem.ingredientId);
-        if (!ingredient) {
-            setError('Ingrediente seleccionado no válido.');
-            return;
+        let name = '';
+        let purchaseUnit = '';
+        let consumptionUnitsPerPurchaseUnit = 1;
+
+        if (currentItem.itemType === 'ingredient') {
+            const ingredient = availableIngredients.find(ing => ing.id === currentItem.itemId);
+            if (!ingredient) {
+                setError('Ingrediente seleccionado no válido.');
+                return;
+            }
+            name = ingredient.name;
+            purchaseUnit = ingredient.purchaseUnit;
+            consumptionUnitsPerPurchaseUnit = ingredient.consumptionUnitsPerPurchaseUnit;
+        } else if (currentItem.itemType === 'product') {
+            const product = availableProducts.find(p => p.id === currentItem.itemId);
+            if (!product) {
+                setError('Producto seleccionado no válido.');
+                return;
+            }
+            name = product.name;
+            purchaseUnit = 'Unidad';
+            consumptionUnitsPerPurchaseUnit = 1;
         }
 
         // Calculamos el costo unitario a partir del total
         const unitCost = totalCost / quantity;
 
         const newItem: PurchaseItem = {
-            ingredientId: ingredient.id,
-            name: ingredient.name,
-            purchaseUnit: ingredient.purchaseUnit,
+            itemType: currentItem.itemType as 'ingredient' | 'product',
+            name: name,
+            purchaseUnit: purchaseUnit,
             quantity: quantity,
             unitCost: unitCost,
-            consumptionUnitsPerPurchaseUnit: ingredient.consumptionUnitsPerPurchaseUnit,
+            consumptionUnitsPerPurchaseUnit: consumptionUnitsPerPurchaseUnit,
         };
+
+        if (currentItem.itemType === 'ingredient') {
+            newItem.ingredientId = currentItem.itemId;
+        } else {
+            newItem.productId = currentItem.itemId;
+        }
 
         setFormData(prev => ({
             ...prev,
@@ -266,33 +347,102 @@ const AddPurchaseForm: FC<AddPurchaseFormProps> = ({onFormSubmit, heladeriaId, p
                 {/* Añadir Ítems a la Compra */}
                 <h5 className="mt-4">Ítems de la Compra</h5>
                 <div className="card bg-light p-3 mb-3">
+                    <div className="mb-3">
+                        <label className="form-label d-block fw-bold">Tipo de Ítem a Comprar</label>
+                        <div className="btn-group" role="group">
+                            <input type="radio" className="btn-check" name="btnradio" id="btnradio1" autoComplete="off" 
+                                   checked={selectionType === 'ingredient'} 
+                                   onChange={() => { setSelectionType('ingredient'); setCurrentItem(initialItemState); }}/>
+                            <label className="btn btn-outline-primary" htmlFor="btnradio1">Ingrediente / Insumo</label>
+
+                            <input type="radio" className="btn-check" name="btnradio" id="btnradio2" autoComplete="off" 
+                                   checked={selectionType === 'product'} 
+                                   onChange={() => { setSelectionType('product'); setCurrentItem(initialItemState); }}/>
+                            <label className="btn btn-outline-primary" htmlFor="btnradio2">Producto Terminado</label>
+                        </div>
+                    </div>
+                    {/* Selector modo de compra (solo para Productos Terminados) */}
+                    {selectionType === 'product' && (
+                        <div className="mb-3">
+                            <label className="form-label fw-bold">Modo de Compra</label>
+                            <div className="btn-group d-flex" role="group">
+                                <input type="radio" className="btn-check" name="purchaseModeRadio" id="modeUnit" autoComplete="off"
+                                       checked={purchaseMode === 'unit'}
+                                       onChange={() => { setPurchaseMode('unit'); setPackageDetails({ numPackages: '', unitsPerPackage: '', pricePerUnit: '' }); }}/>
+                                <label className="btn btn-outline-secondary" htmlFor="modeUnit">🛒 Por Unidad</label>
+
+                                <input type="radio" className="btn-check" name="purchaseModeRadio" id="modePackage" autoComplete="off"
+                                       checked={purchaseMode === 'package'}
+                                       onChange={() => { setPurchaseMode('package'); setCurrentItem(prev => ({...prev, quantity: '', itemTotalCost: ''})); }}/>
+                                <label className="btn btn-outline-secondary" htmlFor="modePackage">📦 Por Paquete</label>
+                            </div>
+                        </div>
+                    )}
                     <div className="row">
                         <div className="col-md-7 mb-3">
-                            <label htmlFor="selectedIngredient" className="form-label">Ingrediente</label>
-                            <select ref={ingredientSelectRef} className="form-select" name="ingredientId"
-                                    value={currentItem.ingredientId} onChange={handleCurrentItemChange}>
-                                <option value="">Selecciona un ingrediente...</option>
-                                {availableIngredients.map(ing => (
-                                    <option key={ing.id} value={ing.id}>{ing.name}</option>
+                            <label htmlFor="selectedItem" className="form-label">
+                                Selecciona el {selectionType === 'ingredient' ? 'Ingrediente' : 'Producto'}
+                            </label>
+                            <select ref={ingredientSelectRef} className="form-select" name="itemSelection"
+                                    value={currentItem.itemId ? `${currentItem.itemType}::${currentItem.itemId}` : ''} onChange={handleCurrentItemChange}>
+                                <option value="">Selecciona...</option>
+                                {selectionType === 'ingredient' && availableIngredients.map(ing => (
+                                    <option key={`ing-${ing.id}`} value={`ingredient::${ing.id}`}>{ing.name}</option>
+                                ))}
+                                {selectionType === 'product' && availableProducts.map(prod => (
+                                    <option key={`prod-${prod.id}`} value={`product::${prod.id}`}>{prod.name}</option>
                                 ))}
                             </select>
                         </div>
+                        {/* Campos de cantidad/costo dinámicos según el modo */}
                         <div className="col-md-5 mb-3">
-                            <div className="row">
-                                <div className="col-6">
-                                    <label htmlFor="itemQuantity" className="form-label">Cantidad
-                                        ({currentItem.selectedUnit || 'Unidad'})</label>
-                                    <input type="number" step="0.01" className="form-control" name="quantity"
-                                           value={currentItem.quantity} onChange={handleCurrentItemChange}
-                                           onKeyDown={handleKeyDown} min="0.01"/>
+                            {(selectionType === 'ingredient' || purchaseMode === 'unit') && (
+                                <div className="row">
+                                    <div className="col-6">
+                                        <label className="form-label">Cantidad ({currentItem.selectedUnit || 'Unidad'})</label>
+                                        <input type="number" step="0.01" className="form-control" name="quantity"
+                                               value={currentItem.quantity} onChange={handleCurrentItemChange}
+                                               onKeyDown={handleKeyDown} min="0.01"/>
+                                    </div>
+                                    <div className="col-6">
+                                        <label className="form-label">Costo Total del Ítem</label>
+                                        <input type="number" step="0.01" className="form-control" name="itemTotalCost"
+                                               value={currentItem.itemTotalCost} onChange={handleCurrentItemChange}
+                                               onKeyDown={handleKeyDown} min="0.00"/>
+                                    </div>
                                 </div>
-                                <div className="col-6">
-                                    <label htmlFor="itemTotalCost" className="form-label">Costo Total del Ítem</label>
-                                    <input type="number" step="0.01" className="form-control" name="itemTotalCost"
-                                           value={currentItem.itemTotalCost} onChange={handleCurrentItemChange}
-                                           onKeyDown={handleKeyDown} min="0.00"/>
+                            )}
+                            {selectionType === 'product' && purchaseMode === 'package' && (
+                                <div className="row g-2">
+                                    <div className="col-4">
+                                        <label className="form-label"># Paquetes</label>
+                                        <input type="number" className="form-control" min="1" placeholder="Ej: 3"
+                                               value={packageDetails.numPackages}
+                                               onChange={e => setPackageDetails(prev => ({...prev, numPackages: e.target.value}))}/>
+                                    </div>
+                                    <div className="col-4">
+                                        <label className="form-label">Unidades/Paq.</label>
+                                        <input type="number" className="form-control" min="1" placeholder="Ej: 12"
+                                               value={packageDetails.unitsPerPackage}
+                                               onChange={e => setPackageDetails(prev => ({...prev, unitsPerPackage: e.target.value}))}/>
+                                    </div>
+                                    <div className="col-4">
+                                        <label className="form-label">Precio/Unidad</label>
+                                        <input type="number" className="form-control" min="0" placeholder="Ej: 1500"
+                                               value={packageDetails.pricePerUnit}
+                                               onChange={e => setPackageDetails(prev => ({...prev, pricePerUnit: e.target.value}))}/>
+                                    </div>
+                                    {/* Resumen calculado en tiempo real */}
+                                    {packageDetails.numPackages && packageDetails.unitsPerPackage && packageDetails.pricePerUnit && (
+                                        <div className="col-12">
+                                            <div className="alert alert-info py-1 px-2 mt-1 mb-0 small">
+                                                <strong>{parseFloat(packageDetails.numPackages) * parseFloat(packageDetails.unitsPerPackage)} unidades</strong> en total &mdash;
+                                                Costo total: <strong>${new Intl.NumberFormat('es-CO').format(parseFloat(packageDetails.numPackages) * parseFloat(packageDetails.unitsPerPackage) * parseFloat(packageDetails.pricePerUnit))}</strong>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
+                            )}
                         </div>
                     </div>
                     <div className="row">
