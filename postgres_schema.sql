@@ -1,6 +1,6 @@
 -- ===========================================================================
--- POSTGRESQL SCHEMA FOR "LA TIENDITA" (ICE CREAM SHOP SAAS / MULTI-TENANT)
--- ESQUEMA POSTGRESQL PARA "LA TIENDITA" (SAAS DE HELADERÍA / MULTI-INQUILINO)
+-- POSTGRESQL SCHEMA FOR "LA TIENDITA" (SHOP SAAS / MULTI-TENANT)
+-- ESQUEMA POSTGRESQL PARA "LA TIENDITA" (SAAS DE TIENDAS / MULTI-INQUILINO)
 -- ===========================================================================
 -- This schema represents a robust relational translation of the Firestore
 -- document models found in the codebase.
@@ -34,32 +34,32 @@ CREATE TABLE users (
 );
 
 -- ==========================================
--- 1B. CLIENT ACCOUNTS PER SHOP / CUENTAS DE CLIENTE POR TIENDA (CRÉDITOS Y FIADOS POR HELADERÍA)
+-- 1B. CLIENT ACCOUNTS PER SHOP / CUENTAS DE CLIENTE POR TIENDA (CRÉDITOS Y FIADOS POR TIENDA)
 -- ==========================================
 -- This allows the same client to have independent credit, debt and credit limits
 -- in different shops (multi-tenancy isolation).
 -- Esto permite que un mismo cliente pueda tener crédito, deuda y límite de deuda
 -- independientes en diferentes tiendas (aislamiento de multi-tenancy).
 CREATE TABLE client_shop_accounts (
-    shop_id UUID NOT NULL REFERENCES ice_cream_shops(id) ON DELETE CASCADE, -- Shop ID reference / ID de la heladería de referencia
+    shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE, -- Shop ID reference / ID de la tienda de referencia
     client_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE, -- Client ID reference / ID del cliente de referencia
-    credits NUMERIC(12, 2) DEFAULT 0.00, -- Client credit balance in this shop / Saldo a favor en esta heladería específica
-    debt NUMERIC(12, 2) DEFAULT 0.00, -- Client debt balance in this shop / Saldo en contra (deuda) en esta heladería específica
-    is_credit_enabled BOOLEAN DEFAULT FALSE, -- If credit is enabled for this client in this shop / Si la heladería habilitó fiado para este cliente
-    credit_limit NUMERIC(12, 2) DEFAULT 0.00, -- Max debt allowed by this shop for this client / Límite máximo de deuda permitido por esta heladería
+    credits NUMERIC(12, 2) DEFAULT 0.00, -- Client credit balance in this shop / Saldo a favor en esta tienda específica
+    debt NUMERIC(12, 2) DEFAULT 0.00, -- Client debt balance in this shop / Saldo en contra (deuda) en esta tienda específica
+    is_credit_enabled BOOLEAN DEFAULT FALSE, -- If credit is enabled for this client in this shop / Si la tienda habilitó fiado para este cliente
+    credit_limit NUMERIC(12, 2) DEFAULT 0.00, -- Max debt allowed by this shop for this client / Límite máximo de deuda permitido por esta tienda
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, -- Balances creation timestamp / Fecha de creación del registro de saldos
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, -- Balances last update timestamp / Fecha de última actualización de los saldos
     PRIMARY KEY (shop_id, client_id)
 );
 
 -- ==========================================
--- 2. ICE CREAM SHOPS / HELADERÍAS
+-- 2. SHOPS / TIENDAS
 -- ==========================================
 -- Multi-tenant configuration for each shop.
--- Configuración multi-inquilino para cada heladería.
-CREATE TABLE ice_cream_shops (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Unique identifier of the shop / Identificador único de la heladería
-    name VARCHAR(255) NOT NULL, -- Name of the shop / Nombre de la heladería
+-- Configuración multi-inquilino para cada tienda.
+CREATE TABLE shops (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Unique identifier of the shop / Identificador único de la tienda
+    name VARCHAR(255) NOT NULL, -- Name of the shop / Nombre de la tienda
     address TEXT, -- Physical address / Dirección física
     photo_url TEXT, -- Banner or shop picture URL / URL del banner o foto de la tienda
     whatsapp VARCHAR(50), -- WhatsApp contact link or number / Número o enlace de contacto de WhatsApp
@@ -72,7 +72,7 @@ CREATE TABLE ice_cream_shops (
     theme_logo_url TEXT, -- Header/sidebar logo URL / URL del logotipo para el header/sidebar
     
     -- Terminology localization / Localización de la terminología
-    terminology_shop_label VARCHAR(100) DEFAULT 'Heladería', -- Translation/term for 'Shop' / Término personalizado para 'Heladería'
+    terminology_shop_label VARCHAR(100) DEFAULT 'Tienda', -- Translation/term for 'Shop' / Término personalizado para 'Tienda'
     terminology_product_label VARCHAR(100) DEFAULT 'Producto', -- Translation/term for 'Product' / Término personalizado para 'Producto'
     
     -- Feature flags and active modules stored as JSONB for flexiblity
@@ -80,20 +80,20 @@ CREATE TABLE ice_cream_shops (
     modules JSONB DEFAULT '{}'::jsonb, -- Enabled SaaS modules / Módulos SaaS habilitados
     features JSONB DEFAULT '{}'::jsonb, -- Enabled feature flags / Banderas de características habilitadas
     
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, -- Shop creation timestamp / Fecha de creación de la heladería
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP -- Shop last update timestamp / Fecha de última actualización de la heladería
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, -- Shop creation timestamp / Fecha de creación de la tienda
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP -- Shop last update timestamp / Fecha de última actualización de la tienda
 );
 
 -- ==========================================
--- 3. SHOP MEMBERSHIP & PERMISSIONS / MIEMBROS Y PERMISOS DE HELADERÍA
+-- 3. SHOP MEMBERSHIP & PERMISSIONS / MIEMBROS Y PERMISOS DE TIENDA
 -- ==========================================
 -- Links users to shops with specific roles/permissions.
--- Relaciona usuarios con heladerías con roles y permisos específicos.
+-- Relaciona usuarios con tiendas con roles y permisos específicos.
 CREATE TABLE shop_members (
-    shop_id UUID REFERENCES ice_cream_shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la heladería asociada
+    shop_id UUID REFERENCES shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la tienda asociada
     user_id VARCHAR(255) REFERENCES users(id) ON DELETE CASCADE, -- Associated user ID / ID del usuario asociado
-    role_id UUID, -- Associated shop-level role / Rol asociado a nivel de heladería
-    role VARCHAR(50) NOT NULL CHECK (role IN ('owner', 'employee')), -- Standard member role in the shop / Rol estándar del miembro en la heladería
+    role_id UUID, -- Associated shop-level role / Rol asociado a nivel de tienda
+    role VARCHAR(50) NOT NULL CHECK (role IN ('owner', 'employee')), -- Standard member role in the shop / Rol estándar del miembro en la tienda
     permissions JSONB DEFAULT '{}'::jsonb, -- Specific permissions overrides / Anulaciones de permisos específicos
     added_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, -- Date user was added as member / Fecha en la que el usuario fue añadido como miembro
     PRIMARY KEY (shop_id, user_id)
@@ -102,7 +102,7 @@ CREATE TABLE shop_members (
 -- Work Schedules for employees / Horarios de trabajo para empleados
 CREATE TABLE work_schedules (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Schedule entry unique identifier / Identificador único de la entrada del horario
-    shop_id UUID NOT NULL REFERENCES ice_cream_shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la heladería asociada
+    shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la tienda asociada
     user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE, -- Associated employee ID / ID del empleado asociado
     day_of_week INT NOT NULL CHECK (day_of_week BETWEEN 0 AND 6), -- Day of week (0=Sunday ... 6=Saturday) / Día de la semana (0=Domingo ... 6=Sábado)
     start_time TIME NOT NULL, -- Daily start working time / Hora diaria de inicio de labores
@@ -113,7 +113,7 @@ CREATE TABLE work_schedules (
 -- Work Schedule Exceptions (e.g. holidays or days off) / Excepciones de horarios (ej. festivos o días libres)
 CREATE TABLE schedule_exceptions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Exception entry unique identifier / Identificador único de la entrada de excepción
-    shop_id UUID NOT NULL REFERENCES ice_cream_shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la heladería asociada
+    shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la tienda asociada
     user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE, -- Associated employee ID / ID del empleado asociado
     exception_date DATE NOT NULL, -- Date of the schedule exception / Fecha de la excepción de horario
     start_time TIME NOT NULL, -- Modified start working time / Hora modificada de inicio de labores
@@ -132,10 +132,10 @@ CREATE TABLE permissions (
     description TEXT -- Details about what it allows / Detalles sobre lo que permite
 );
 
--- Custom roles defined inside a shop / Roles personalizados definidos dentro de una heladería
+-- Custom roles defined inside a shop / Roles personalizados definidos dentro de una tienda
 CREATE TABLE roles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Role unique identifier / Identificador único del rol
-    shop_id UUID NOT NULL REFERENCES ice_cream_shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la heladería asociada
+    shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la tienda asociada
     name VARCHAR(100) NOT NULL, -- Name of the custom role / Nombre del rol personalizado
     description TEXT, -- Details about the role / Detalles sobre el rol
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, -- Role creation timestamp / Fecha de creación del rol
@@ -163,7 +163,7 @@ FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE SET NULL;
 -- Ingredientes crudos utilizados en las recetas.
 CREATE TABLE ingredients (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Ingredient unique identifier / Identificador único del ingrediente
-    shop_id UUID NOT NULL REFERENCES ice_cream_shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la heladería asociada
+    shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la tienda asociada
     name VARCHAR(255) NOT NULL, -- Ingredient name / Nombre del ingrediente
     category VARCHAR(100) NOT NULL, -- Category of ingredient / Categoría del ingrediente
     purchase_unit VARCHAR(50) NOT NULL, -- Buying unit (e.g. Box, Kg) / Unidad de compra (ej. Caja, Kg)
@@ -178,7 +178,7 @@ CREATE TABLE ingredients (
 -- Productos terminados que se venden a los clientes.
 CREATE TABLE products (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Product unique identifier / Identificador único del producto
-    shop_id UUID NOT NULL REFERENCES ice_cream_shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la heladería asociada
+    shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la tienda asociada
     name VARCHAR(255) NOT NULL, -- Product name / Nombre del producto
     price NUMERIC(12, 2) NOT NULL, -- Public sale price / Precio de venta al público
     category VARCHAR(100) NOT NULL, -- Category of product / Categoría del producto
@@ -205,7 +205,7 @@ CREATE TABLE product_recipes (
 -- Suppliers registry / Registro de proveedores
 CREATE TABLE suppliers (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Supplier unique identifier / Identificador único del proveedor
-    shop_id UUID NOT NULL REFERENCES ice_cream_shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la heladería asociada
+    shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la tienda asociada
     name VARCHAR(255) NOT NULL, -- Supplier name or company name / Nombre del proveedor o empresa
     contact_person VARCHAR(255), -- Name of the contact person / Nombre de la persona de contacto
     phone VARCHAR(50), -- Contact phone number / Teléfono de contacto
@@ -217,7 +217,7 @@ CREATE TABLE suppliers (
 -- Purchase invoices / Facturas de compra
 CREATE TABLE purchases (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Purchase unique identifier / Identificador único de la compra
-    shop_id UUID NOT NULL REFERENCES ice_cream_shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la heladería asociada
+    shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la tienda asociada
     supplier_id UUID REFERENCES suppliers(id) ON DELETE SET NULL, -- Supplier ID reference / ID del proveedor de referencia
     supplier_name VARCHAR(255) NOT NULL, -- Supplier name snapshot / Copia del nombre del proveedor
     invoice_number VARCHAR(100), -- Supplier invoice number / Número de factura del proveedor
@@ -250,7 +250,7 @@ CREATE TABLE purchase_items (
 -- Cash register sessions / Sesiones de caja registradora
 CREATE TABLE cash_sessions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Cash session unique identifier / Identificador único de la sesión de caja
-    shop_id UUID NOT NULL REFERENCES ice_cream_shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la heladería asociada
+    shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la tienda asociada
     employee_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE RESTRICT, -- Employee who opened the session / Empleado que abrió la sesión
     employee_name VARCHAR(255) NOT NULL, -- Employee name snapshot / Copia del nombre del empleado
     start_time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, -- Cash register open time / Fecha y hora de apertura de caja
@@ -274,7 +274,7 @@ CREATE TABLE cash_sessions (
 -- Gastos individuales registrados durante una sesión de caja o de manera general
 CREATE TABLE expenses (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Expense unique identifier / Identificador único del gasto
-    shop_id UUID NOT NULL REFERENCES ice_cream_shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la heladería asociada
+    shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la tienda asociada
     description TEXT NOT NULL, -- Reason for the expense / Motivo del gasto
     amount NUMERIC(12, 2) NOT NULL, -- Amount spent / Monto gastado
     category VARCHAR(50) NOT NULL CHECK (category IN ('operacional', 'servicios', 'salarios', 'marketing', 'otro')), -- Category of expense / Categoría del gasto
@@ -299,7 +299,7 @@ CREATE TABLE cash_session_expenses (
 -- ==========================================
 CREATE TABLE payment_methods (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Payment method identifier / Identificador del método de pago
-    shop_id UUID NOT NULL REFERENCES ice_cream_shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la heladería asociada
+    shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la tienda asociada
     name VARCHAR(255) NOT NULL, -- Display name of payment method / Nombre visible del método de pago
     type VARCHAR(50) NOT NULL CHECK (type IN ('cash', 'electronic', 'credit')), -- Cash, electronic or credit / Tipo: efectivo, electrónico o crédito
     enabled BOOLEAN DEFAULT TRUE, -- Active status of method / Estado activo del método
@@ -311,7 +311,7 @@ CREATE TABLE payment_methods (
 -- Promotions definitions / Definiciones de promociones
 CREATE TABLE promotions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Promotion unique identifier / Identificador único de la promoción
-    shop_id UUID NOT NULL REFERENCES ice_cream_shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la heladería asociada
+    shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la tienda asociada
     name VARCHAR(255) NOT NULL, -- Name of the promotion / Nombre de la promoción
     description TEXT, -- Promotion description / Descripción de la promoción
     type VARCHAR(50) DEFAULT 'bundle' CHECK (type = 'bundle'), -- Promotion structure type / Tipo de estructura de la promoción
@@ -337,7 +337,7 @@ CREATE TABLE promotion_items (
 -- ==========================================
 CREATE TABLE sales (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Sale unique identifier / Identificador único de la venta
-    shop_id UUID NOT NULL REFERENCES ice_cream_shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la heladería asociada
+    shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la tienda asociada
     session_id UUID REFERENCES cash_sessions(id) ON DELETE SET NULL, -- Associated cash session ID / ID de la sesión de caja asociada
     total NUMERIC(12, 2) NOT NULL, -- Sale total amount / Monto total de la venta
     employee_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE RESTRICT, -- Employee ID who made the sale / ID del empleado que realizó la venta
@@ -388,7 +388,7 @@ CREATE TABLE debt_payment_requests (
     client_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE, -- Associated client ID / ID del cliente asociado
     client_name VARCHAR(255) NOT NULL, -- Client name snapshot / Copia del nombre del cliente
     client_phone VARCHAR(50), -- Client contact phone / Teléfono de contacto del cliente
-    shop_id UUID NOT NULL REFERENCES ice_cream_shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la heladería asociada
+    shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la tienda asociada
     amount NUMERIC(12, 2) NOT NULL, -- Repayment amount / Monto a abonar
     payment_method_id UUID REFERENCES payment_methods(id) ON DELETE SET NULL, -- Payment method ID / ID del método de pago
     payment_method_name VARCHAR(255) NOT NULL, -- Payment method name / Nombre del método de pago
@@ -404,7 +404,7 @@ CREATE TABLE debt_payment_requests (
 -- ==========================================
 CREATE TABLE orders (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Order unique identifier / Identificador único del pedido
-    shop_id UUID NOT NULL REFERENCES ice_cream_shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la heladería asociada
+    shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la tienda asociada
     client_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE, -- Client who placed the order / Cliente que realizó el pedido
     client_name VARCHAR(255) NOT NULL, -- Client name snapshot / Copia del nombre del cliente
     client_phone VARCHAR(50), -- Client contact phone / Teléfono de contacto del cliente
