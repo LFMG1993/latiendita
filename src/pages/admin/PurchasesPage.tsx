@@ -1,4 +1,5 @@
 import {useState, useEffect, FC} from "react";
+import {useToast} from "../../context/ToastContext";
 import {useAuthStore} from "../../store/authStore.ts";
 import FullScreenLoader from "../../components/general/FullScreenLoader.tsx";
 import Breadcrumbs from "../../components/general/Breadcrumbs.tsx";
@@ -10,6 +11,7 @@ import {Purchase} from "../../types";
 
 const PurchasesPage: FC = () => {
     const {activeIceCreamShopId: heladeriaId, loading: authLoading} = useAuthStore();
+    const {showToast} = useToast();
     const [pageLoading, setPageLoading] = useState(true);
     const [purchases, setPurchases] = useState<Purchase[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -62,10 +64,11 @@ const PurchasesPage: FC = () => {
         if (window.confirm("¿Estás seguro de que quieres eliminar esta compra? Esta acción es irreversible y ajustará el stock de los ingredientes.")) {
             try {
                 await deletePurchase(heladeriaId, purchaseId);
-                setRefetchTrigger(c => c + 1); // Recargar la lista de compras
+                showToast("Compra eliminada correctamente.", "success");
+                setRefetchTrigger(c => c + 1);
             } catch (error) {
                 console.error("Error al eliminar la compra:", error);
-                alert("Ocurrió un error al eliminar la compra.");
+                showToast("Ocurrió un error al eliminar la compra.", "danger");
             }
         }
     };

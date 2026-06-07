@@ -3,6 +3,7 @@ import {Navigate, useNavigate} from 'react-router-dom';
 import {useAuthStore} from '../store/authStore';
 import FullScreenLoader from "./general/FullScreenLoader";
 import {usePermissions} from "../hooks/usePermissions.ts";
+import {useToast} from "../context/ToastContext";
 
 /**
  * Componente de ruta protegida que redirige al login si el usuario no está autenticado.
@@ -17,13 +18,14 @@ const ProtectedRoute: FC<ProtectedRouteProps> = ({children, requiredPermission})
     const {isAuthenticated, user, loading} = useAuthStore();
     const {hasPermission} = usePermissions();
     const navigate = useNavigate();
+    const {showToast} = useToast();
 
     useEffect(() => {
         // Se ejecuta después del renderizado inicial para evitar cambios de estado durante el render.
         if (!loading && isAuthenticated && requiredPermission && !hasPermission(requiredPermission)) {
             // Usamos un timeout para que el usuario pueda ver el mensaje antes de la redirección.
             setTimeout(() => {
-                alert('No tienes permiso para acceder a esta sección. Serás redirigido a tu página principal.');
+                showToast('No tienes permiso para acceder a esta sección. Serás redirigido a tu página principal.', 'warning');
                 const redirectTo = user?.role === 'employee' ? '/cash-session' : '/dashboard';
                 navigate(redirectTo, {replace: true});
             }, 100);

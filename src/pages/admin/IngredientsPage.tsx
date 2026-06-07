@@ -1,4 +1,5 @@
 import {useState, useEffect, FC} from "react";
+import {useToast} from "../../context/ToastContext";
 import AddIngredientForm from "../../components/ingredients/AddIngredientForm.tsx";
 import IngredientTable from "../../components/ingredients/IngredientTable.tsx";
 import {deleteIngredient, getIngredients} from "../../services/ingredientServices.ts";
@@ -12,6 +13,7 @@ import AdjustStockModal from "../../components/ingredients/AdjustStockModal.tsx"
 const IngredientsPage: FC = () => {
     const {activeIceCreamShopId: heladeriaId, loading: authLoading} = useAuthStore();
     const [pageLoading, setPageLoading] = useState(true);
+    const {showToast} = useToast();
     const [ingredients, setIngredients] = useState<Ingredient[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [adjustingIngredient, setAdjustingIngredient] = useState<Ingredient | null>(null);
@@ -54,10 +56,10 @@ const IngredientsPage: FC = () => {
         if (window.confirm(`¿Estás seguro de que quieres eliminar este ingrediente?`)) {
             try {
                 await deleteIngredient(heladeriaId, ingredientId);
-                // Disparamos la recarga para asegurar que la UI refleje el estado de la DB
+                showToast("Ingrediente eliminado correctamente.", "success");
                 setRefetchTrigger(c => c + 1);
             } catch (error) {
-                alert("Error al eliminar el ingrediente.");
+                showToast("Error al eliminar el ingrediente.", "danger");
             }
         }
     };

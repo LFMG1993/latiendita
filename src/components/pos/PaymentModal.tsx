@@ -4,6 +4,7 @@ import {UserProfile} from "../../types/user.types";
 import Modal from "../general/Modal";
 import {Trash, PersonFill, CreditCard, Cash, Coin, Search, XCircle, PlusCircle} from "react-bootstrap-icons";
 import {createQuickClient, QuickClientData} from "../../services/userServices";
+import {useToast} from "../../context/ToastContext";
 
 interface PaymentModalProps {
     show: boolean;
@@ -23,13 +24,14 @@ const formatCurrency = (value: number) => new Intl.NumberFormat('es-CO', {
     maximumFractionDigits: 0
 }).format(value);
 
-const PaymentModal: FC<PaymentModalProps> = ({show, onClose, orderTotal, paymentMethods, clients, selectedClientId, onSelectClient, onConfirmPayment}) => {
+const PaymentModal: FC<PaymentModalProps> = ({show, onClose, orderTotal, paymentMethods, clients, selectedClientId, onSelectClient, onConfirmPayment, onClientCreated}) => {
     const [payments, setPayments] = useState<SalePayment[]>([]);
     const [selectedMethodId, setSelectedMethodId] = useState<string>('');
     const [loading, setLoading] = useState(false);
     const [currentAmount, setCurrentAmount] = useState<string>('');
     const [changeDue, setChangeDue] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
+    const {showToast} = useToast();
     const [isCreatingClient, setIsCreatingClient] = useState(false);
     const [isSavingClient, setIsSavingClient] = useState(false);
     const [newClientData, setNewClientData] = useState<QuickClientData>({firstName: '', lastName: '', phone: '', documentId: ''});
@@ -119,19 +121,19 @@ const PaymentModal: FC<PaymentModalProps> = ({show, onClose, orderTotal, payment
             // Si hay un pago a crédito, validar que el cliente esté seleccionado y habilitado
             if (payments.some(p => p.type === 'credit')) {
                 if (!selectedClientId) {
-                    alert("Por favor selecciona un cliente para el pago a crédito (Fiado).");
+                    showToast("Por favor selecciona un cliente para el pago a crédito (Fiado).", "warning");
                     return;
                 }
                 const client = clients.find(c => c.uid === selectedClientId);
                 if (client && client.isCreditEnabled === false) { // Strict check for false
-                     alert(`El cliente ${client.firstName} no tiene el crédito habilitado.`);
+                     showToast(`El cliente ${client.firstName} no tiene el crédito habilitado.`, "warning");
                      return;
                 }
                 if (client && client.creditLimit && client.creditLimit > 0) {
                     const creditAmount = payments.filter(p => p.type === 'credit').reduce((sum, p) => sum + p.amount, 0);
                     const totalDebtAfterPurchase = (client.debt || 0) + creditAmount;
                     if (totalDebtAfterPurchase > client.creditLimit) {
-                        alert(`¡Límite de crédito excedido!\n\nEl cliente ${client.firstName} tiene un límite de ${formatCurrency(client.creditLimit)} y una deuda actual de ${formatCurrency(client.debt || 0)}.\nIntentar fiar ${formatCurrency(creditAmount)} excede el límite.`);
+                        showToast(`¡Límite de crédito excedido! El cliente ${client.firstName} tiene un límite de ${formatCurrency(client.creditLimit)} y una deuda de ${formatCurrency(client.debt || 0)}.`, "danger");
                         return;
                     }
                 }
@@ -172,7 +174,7 @@ const PaymentModal: FC<PaymentModalProps> = ({show, onClose, orderTotal, payment
             setSearchTerm('');
             setNewClientData({firstName: '', lastName: '', phone: '', documentId: ''});
         } catch (error) {
-            alert("Error al crear el cliente");
+            showToast("Error al crear el cliente", "danger");
         } finally {
             setIsSavingClient(false);
         }
@@ -321,7 +323,7 @@ const PaymentModal: FC<PaymentModalProps> = ({show, onClose, orderTotal, payment
                                                      className={`list-group-item list-group-item-action border-0 px-3 py-2 d-flex justify-content-between align-items-center ${!c.isCreditEnabled ? 'bg-warning-subtle' : ''}`}
                                                      onClick={() => {
                                                          if (hasCreditPayment && c.isCreditEnabled === false) {
-                                                             alert('Este cliente tiene bloqueado el crédito.');
+                                                             showToast('Este cliente tiene bloqueado el crédito.', 'warning');
                                                              return;
                                                          }
                                                          onSelectClient(c.uid || '');

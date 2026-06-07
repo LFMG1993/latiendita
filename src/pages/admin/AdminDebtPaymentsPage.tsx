@@ -4,6 +4,7 @@ import { DebtPaymentRequest } from '../../types';
 import { getPendingDebtPayments, approveDebtPayment, rejectDebtPayment, updateClientCreditLimit } from '../../services/debtPaymentService';
 import FullScreenLoader from '../../components/general/FullScreenLoader';
 import { CheckLg, XLg, Receipt, Wallet2, PersonCheck } from 'react-bootstrap-icons';
+import { useToast } from '../../context/ToastContext';
 
 const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(amount);
@@ -17,6 +18,7 @@ interface ApproveModalProps {
 
 const ApproveModal: FC<ApproveModalProps> = ({ payment, onClose, onApproved }) => {
     const [loading, setLoading] = useState(false);
+    const { showToast } = useToast();
 
     const handleApprove = async () => {
         setLoading(true);
@@ -25,7 +27,7 @@ const ApproveModal: FC<ApproveModalProps> = ({ payment, onClose, onApproved }) =
             onApproved(newDebt === 0, payment);
         } catch (error) {
             console.error("Error al aprobar:", error);
-            alert("Error al aprobar el pago. Inténtalo de nuevo.");
+            showToast("Error al aprobar el pago. Inténtalo de nuevo.", "danger");
             setLoading(false);
         }
     };
@@ -87,6 +89,7 @@ const CreditModal: FC<CreditModalProps> = ({ payment, onClose, onSaved }) => {
     const [creditAction, setCreditAction] = useState<'keep' | 'restore' | 'change'>('restore');
     const [newCreditAmount, setNewCreditAmount] = useState('');
     const [loading, setLoading] = useState(false);
+    const { showToast } = useToast();
 
     const handleSave = async () => {
         setLoading(true);
@@ -97,7 +100,7 @@ const CreditModal: FC<CreditModalProps> = ({ payment, onClose, onSaved }) => {
             } else if (creditAction === 'change') {
                 const amount = parseFloat(newCreditAmount);
                 if (isNaN(amount) || amount < 0) {
-                    alert('Ingresa un monto válido.');
+                    showToast('Ingresa un monto válido.', 'warning');
                     setLoading(false);
                     return;
                 }
@@ -106,7 +109,7 @@ const CreditModal: FC<CreditModalProps> = ({ payment, onClose, onSaved }) => {
             onSaved();
         } catch (error) {
             console.error("Error actualizando crédito:", error);
-            alert("Error al actualizar el crédito.");
+            showToast("Error al actualizar el crédito.", "danger");
         } finally {
             setLoading(false);
         }
@@ -183,6 +186,7 @@ const CreditModal: FC<CreditModalProps> = ({ payment, onClose, onSaved }) => {
 // ============ Página principal ============
 const AdminDebtPaymentsPage: FC = () => {
     const { activeIceCreamShopId } = useAuthStore();
+    const { showToast } = useToast();
     const [payments, setPayments] = useState<DebtPaymentRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState<string | null>(null);
@@ -218,7 +222,7 @@ const AdminDebtPaymentsPage: FC = () => {
             // Mostrar modal de crédito
             setCreditTarget(payment);
         } else {
-            alert(`✅ Pago aprobado correctamente. El cliente realizó un abono de ${formatCurrency(payment.amount)}.`);
+            showToast(`✅ Pago aprobado correctamente. El cliente realizó un abono de ${formatCurrency(payment.amount)}.`, 'success');
         }
     };
 
@@ -232,7 +236,7 @@ const AdminDebtPaymentsPage: FC = () => {
             setRejectReason('');
         } catch (error) {
             console.error("Error al rechazar:", error);
-            alert("Error al rechazar el pago.");
+            showToast("Error al rechazar el pago.", "danger");
         } finally {
             setProcessingId(null);
         }
@@ -322,7 +326,7 @@ const AdminDebtPaymentsPage: FC = () => {
                 <CreditModal
                     payment={creditTarget}
                     onClose={() => setCreditTarget(null)}
-                    onSaved={() => { setCreditTarget(null); alert('✅ Crédito actualizado correctamente.'); }}
+                    onSaved={() => { setCreditTarget(null); showToast('✅ Crédito actualizado correctamente.', 'success'); }}
                 />
             )}
 

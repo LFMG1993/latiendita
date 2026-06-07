@@ -4,6 +4,7 @@ import { Ingredient } from '../../types';
 import Modal from '../general/Modal.tsx';
 import { adjustIngredientStock } from '../../services/ingredientServices.ts';
 import { useAuthStore } from '../../store/authStore.ts';
+import { useToast } from '../../context/ToastContext';
 
 interface AdjustStockModalProps {
     ingredient: Ingredient | null;
@@ -22,6 +23,7 @@ const adjustmentReasons = [
 
 const AdjustStockModal: FC<AdjustStockModalProps> = ({ ingredient, onClose, onSuccess }) => {
     const { activeIceCreamShop, user } = useAuthStore();
+    const { showToast } = useToast();
     const [adjustment, setAdjustment] = useState(0);
     const [reason, setReason] = useState(adjustmentReasons[0]);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,7 +33,7 @@ const AdjustStockModal: FC<AdjustStockModalProps> = ({ ingredient, onClose, onSu
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!activeIceCreamShop?.id || !user?.uid || !activeIceCreamShop.owner || adjustment === 0) {
-            alert("Por favor, introduce una cantidad de ajuste válida.");
+            showToast("Por favor, introduce una cantidad de ajuste válida.", "warning");
             return;
         }
         setIsSubmitting(true);
@@ -44,10 +46,11 @@ const AdjustStockModal: FC<AdjustStockModalProps> = ({ ingredient, onClose, onSu
                 user.uid,
                 activeIceCreamShop.owner
             );
+            showToast("Stock ajustado correctamente.", "success");
             onSuccess();
         } catch (error) {
             console.error("Error al ajustar el stock:", error);
-            alert("No se pudo realizar el ajuste.");
+            showToast("No se pudo realizar el ajuste.", "danger");
         } finally {
             setIsSubmitting(false);
         }

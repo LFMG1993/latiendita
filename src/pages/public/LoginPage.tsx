@@ -1,7 +1,8 @@
 import {useState, FC, FormEvent, ChangeEvent, useEffect} from 'react';
 import {Link} from 'react-router-dom';
-import {auth} from '../../firebase.ts';
-import {signInWithEmailAndPassword} from 'firebase/auth';
+import {auth, db} from '../../firebase.ts';
+import {signInWithEmailAndPassword, signOut} from 'firebase/auth';
+import {doc, getDoc} from 'firebase/firestore';
 import '../../style/Login.css';
 
 const LoginPage: FC = () => {
@@ -28,7 +29,22 @@ const LoginPage: FC = () => {
         setError('');
         setLoading(true);
         try {
-            await signInWithEmailAndPassword(auth, email, password);
+            const credential = await signInWithEmailAndPassword(auth, email, password);
+
+            // Verificar que el usuario NO sea un cliente.
+            // Los clientes tienen su propio portal de acceso con documento de identidad.
+            const userDocRef = doc(db, 'users', credential.user.uid);
+            const userSnap = await getDoc(userDocRef);
+            const role = userSnap.data()?.role;
+
+            if (role === 'client') {
+                // Es un cliente: cerrar sesión y mostrar error.
+                await signOut(auth);
+                setError('Este portal es solo para administradores y empleados. Si eres cliente, utiliza el acceso de clientes.');
+                setLoading(false);
+                return;
+            }
+
         } catch (err) {
             const error = err as { code?: string };
             if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {

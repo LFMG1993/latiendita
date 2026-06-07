@@ -23,10 +23,19 @@ export const registerSale = async (heladeriaId: string, saleData: NewSaleData): 
 
     // 1. Crear la referencia para el nuevo documento de venta
     const newSaleRef = doc(collection(db, "iceCreamShops", heladeriaId, "sales"));
-    batch.set(newSaleRef, {
+
+    // Firestore no acepta campos con valor `undefined`.
+    // Construimos el objeto limpiando los campos opcionales que puedan ser undefined.
+    const saleDocData = {
         ...saleData,
+        clientId: saleData.clientId ?? null,
+        clientName: saleData.clientName ?? null,
+        pendingDebt: saleData.pendingDebt ?? 0,
+        usedCredits: saleData.usedCredits ?? 0,
         createdAt: serverTimestamp(),
-    });
+    };
+
+    batch.set(newSaleRef, saleDocData);
 
     // 2. Por cada ítem en la venta, descontar el stock de los ingredientes utilizados o del producto
     saleData.items.forEach(item => {

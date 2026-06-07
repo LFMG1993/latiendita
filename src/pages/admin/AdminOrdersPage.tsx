@@ -5,8 +5,10 @@ import {Order, OrderStatus} from '../../types/order.types';
 import FullScreenLoader from '../../components/general/FullScreenLoader';
 import {Clock, CheckCircle, Truck, Box, XCircle, Telephone, Receipt} from 'react-bootstrap-icons';
 import {useTenant} from '../../context/TenantContext';
+import {useToast} from '../../context/ToastContext';
 
 const AdminOrdersPage: FC = () => {
+    const {showToast} = useToast();
     const {activeIceCreamShopId} = useAuthStore();
     const {tenant} = useTenant();
     const [orders, setOrders] = useState<Order[]>([]);
@@ -41,7 +43,7 @@ const AdminOrdersPage: FC = () => {
                 setSelectedOrder(prev => prev ? {...prev, status: newStatus} : null);
             }
         } catch (err) {
-            alert("No se pudo actualizar el estado.");
+            showToast("No se pudo actualizar el estado.", "danger");
         }
     };
 

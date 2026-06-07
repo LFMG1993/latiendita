@@ -1,4 +1,5 @@
 import {FC, useEffect, useState} from 'react';
+import {useToast} from "../../context/ToastContext";
 import {getAllClients, updateClientFinancials} from '../../services/userServices';
 import {useAuthStore} from '../../store/authStore';
 import {getClientOrders} from '../../services/orderService';
@@ -11,6 +12,7 @@ import {useTenant} from '../../context/TenantContext';
 const AdminClientsPage: FC = () => {
     const {activeIceCreamShopId} = useAuthStore();
     const {tenant} = useTenant();
+    const {showToast} = useToast();
     const [clients, setClients] = useState<UserProfile[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -71,9 +73,9 @@ const AdminClientsPage: FC = () => {
             // Actualizar localmente
             setClients(prev => prev.map(c => c.uid === selectedClient.uid ? {...c, credits: tempCredits, debt: tempDebt, isCreditEnabled: tempIsCreditEnabled, creditLimit: tempCreditLimit} : c));
             setSelectedClient(prev => prev ? {...prev, credits: tempCredits, debt: tempDebt, isCreditEnabled: tempIsCreditEnabled, creditLimit: tempCreditLimit} : null);
-            alert("Cuenta actualizada correctamente");
+            showToast("Cuenta actualizada correctamente", "success");
         } catch (err) {
-            alert("Error al actualizar saldos.");
+            showToast("Error al actualizar saldos.", "danger");
         } finally {
             setUpdatingSaldos(false);
         }

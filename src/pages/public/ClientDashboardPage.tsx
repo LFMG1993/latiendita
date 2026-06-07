@@ -8,7 +8,7 @@ import {getActivePaymentMethods} from '../../services/paymentMethodServices';
 import {getClientDebtPayments, createDebtPaymentRequest} from '../../services/debtPaymentService';
 import FullScreenLoader from '../../components/general/FullScreenLoader';
 import {useNavigate, useSearchParams} from 'react-router-dom';
-import {Wallet2, Receipt, ClockHistory, BoxArrowRight, GeoAltFill, MoonFill, SunFill, Plus, Dash, CartFill, PersonCircle, PencilFill, CheckLg, XLg, KeyFill} from 'react-bootstrap-icons';
+import {Wallet2, Receipt, ClockHistory, BoxArrowRight, GeoAltFill, MoonFill, SunFill, Plus, Dash, CartFill, PersonCircle, CheckLg, KeyFill} from 'react-bootstrap-icons';
 import {useTenant} from '../../context/TenantContext';
 import {useTheme} from '../../context/ThemeContext';
 import {getPublicProducts, getAllPublicShops} from '../../services/publicProductService';
@@ -18,6 +18,7 @@ import {auth} from '../../firebase';
 import {signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential} from 'firebase/auth';
 import {doc, updateDoc} from 'firebase/firestore';
 import {db} from '../../firebase';
+import {useToast} from '../../context/ToastContext';
 
 const ClientDashboardPage: FC = () => {
     const {user} = useAuthStore();
@@ -25,6 +26,7 @@ const ClientDashboardPage: FC = () => {
     const [searchParams] = useSearchParams();
     const {tenant} = useTenant();
     const {theme, toggleTheme} = useTheme();
+    const {showToast} = useToast();
     
     const [financials, setFinancials] = useState<ClientFinancials>({credits: 0, debt: 0, isCreditEnabled: false});
     const [orders, setOrders] = useState<Order[]>([]);
@@ -127,10 +129,10 @@ const ClientDashboardPage: FC = () => {
     const handleLogout = async () => {
         try {
             await signOut(auth);
-            navigate('/');
+            navigate('/client-login');
         } catch (error) {
             console.error('Error al cerrar sesión:', error);
-            alert('No se pudo cerrar sesión.');
+            showToast('No se pudo cerrar sesión.', 'danger');
         }
     };
 
@@ -245,7 +247,7 @@ const ClientDashboardPage: FC = () => {
         const shopId = urlShopId || localShopId || user.iceCreamShopIds?.[0];
         
         if (!shopId) {
-            alert("No se pudo identificar la tienda. Por favor escanea el código QR de nuevo.");
+            showToast("No se pudo identificar la tienda. Por favor escanea el código QR de nuevo.", "danger");
             return;
         }
 
@@ -253,7 +255,7 @@ const ClientDashboardPage: FC = () => {
             const currentDebt = financials.debt || 0;
             const newDebt = currentDebt + cartTotal;
             if (financials.creditLimit && financials.creditLimit > 0 && newDebt > financials.creditLimit) {
-                alert(`¡Cupo de crédito excedido!\n\nTu límite de crédito es de ${formatCurrency(financials.creditLimit)} y tu deuda actual es de ${formatCurrency(currentDebt)}.\nEste pedido por ${formatCurrency(cartTotal)} supera tu cupo disponible.`);
+                showToast(`¡Cupo de crédito excedido! Este pedido por ${formatCurrency(cartTotal)} supera tu cupo disponible de ${formatCurrency(Math.max(0, financials.creditLimit - currentDebt))}.`, "warning");
                 return;
             }
         }
@@ -286,10 +288,10 @@ const ClientDashboardPage: FC = () => {
             setOrders(newOrders);
             setCart([]);
             setActiveTab('pending');
-            alert("¡Pedido realizado con éxito!");
+            showToast("¡Pedido realizado con éxito!", "success");
         } catch (error) {
             console.error(error);
-            alert("Error al procesar el pedido.");
+            showToast("Error al procesar el pedido.", "danger");
         } finally {
             setSubmittingOrder(false);
         }
@@ -300,7 +302,7 @@ const ClientDashboardPage: FC = () => {
         if (!user || !currentShopId || !debtPaymentMethodId || !debtVoucherNumber) return;
         const amount = parseFloat(debtPaymentAmount);
         if (isNaN(amount) || amount <= 0 || amount > financials.debt) {
-            alert('Monto inválido. No puede ser mayor a la deuda actual.');
+            showToast('Monto inválido. No puede ser mayor a la deuda actual.', 'warning');
             return;
         }
 
@@ -322,14 +324,14 @@ const ClientDashboardPage: FC = () => {
             setDebtPaymentAmount('');
             setDebtVoucherNumber('');
             setDebtPaymentMethodId('');
-            alert('Solicitud enviada correctamente. El administrador la revisará pronto.');
+            showToast('Solicitud enviada correctamente. El administrador la revisará pronto.', 'success');
             
             const newDebtData = await getClientDebtPayments(user.uid);
             setDebtPaymentsList(newDebtData);
             setActiveTab('debt_payments');
         } catch (err) {
             console.error('Error submitting debt payment:', err);
-            alert('Ocurrió un error al enviar el pago.');
+            showToast('Ocurrió un error al enviar el pago.', 'danger');
         } finally {
             setSubmittingDebtPayment(false);
         }

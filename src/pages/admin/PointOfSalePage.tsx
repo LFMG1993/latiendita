@@ -29,10 +29,12 @@ import {Link} from "react-router-dom";
 import {getActivePromotionsForToday} from "../../services/promotionServices.ts";
 import {usePersistentState} from "../../hooks/usePersistentState.ts";
 import PendingOrdersTabs from "../../components/pos/PendingOrdersTabs.tsx";
+import {useToast} from "../../context/ToastContext";
 
 const PointOfSalePage: FC = () => {
     const {activeIceCreamShopId: heladeriaId, loading: authLoading, user} = useAuthStore();
     const [pageLoading, setPageLoading] = useState(true);
+    const {showToast} = useToast();
     const [products, setProducts] = useState<Product[]>([]);
     const [ingredients, setIngredients] = useState<Ingredient[]>([]);
     const [clients, setClients] = useState<UserProfile[]>([]);
@@ -326,13 +328,13 @@ const PointOfSalePage: FC = () => {
                 }));
             }
 
-            alert('¡Venta registrada con éxito!');
+            showToast('¡Venta registrada con éxito!', 'success');
             handleCloseOrder(activeOrderId);
             setIsPaymentModalOpen(false);
             setSelectedClientId(''); // Limpiar selección de cliente
         } catch (err) {
             console.error("Error al registrar la venta:", err);
-            alert('Ocurrió un error al registrar la venta.');
+            showToast('Ocurrió un error al registrar la venta.', 'danger');
         }
     };
 

@@ -40,6 +40,7 @@ import UpdateNotification from "./components/general/UpdateNotification.tsx";
 import {SuperAdminDashboard} from "./pages/admin/SuperAdminDashboard.tsx";
 import {TenantProvider} from "./context/TenantContext";
 import {ThemeProvider} from "./context/ThemeContext";
+import {ToastProvider} from "./context/ToastContext";
 
 const App: FC = () => {
     const {loading, setLoading, setAuthUser, setUserIceCreamShop, user} = useAuthStore();
@@ -91,7 +92,7 @@ const App: FC = () => {
                     const memberProfile = heladerias[0]?.members?.[currentUser.uid];
                     if (profileData?.role === 'employee' && memberProfile) {
                         if (!checkSchedule(memberProfile.workSchedule, memberProfile.scheduleExceptions)) {
-                            alert("Estás intentando acceder fuera de tu horario de trabajo autorizado. Se cerrará la sesión.");
+                            console.warn("Acceso fuera de horario autorizado. Se cerrará la sesión.");
                             auth.signOut();
                             return;
                         }
@@ -231,7 +232,9 @@ const AppWrapper: FC = () => {
         <Router>
             <ThemeProvider>
                 <TenantProvider>
-                    <App/>
+                    <ToastProvider>
+                        <App/>
+                    </ToastProvider>
                 </TenantProvider>
             </ThemeProvider>
         </Router>
