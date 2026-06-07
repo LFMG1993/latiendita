@@ -46,6 +46,7 @@ const ClientDashboardPage: FC = () => {
     const [submittingOrder, setSubmittingOrder] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<'cash' | 'credit'>('cash');
     const [selectedCategory, setSelectedCategory] = useState<string>('Todas');
+    const [visibleProductsCount, setVisibleProductsCount] = useState(6);
     const [availableShops, setAvailableShops] = useState<{id: string, name: string, logoURL?: string}[]>([]);
     const [currentShopId, setCurrentShopId] = useState<string | null>(null);
     const [showShopSelectorModal, setShowShopSelectorModal] = useState(false);
@@ -407,7 +408,7 @@ const ClientDashboardPage: FC = () => {
                 </div>
             </nav>
 
-            <div className="container py-4">
+            <div className="container py-4 pb-5 mb-4 mb-md-0 pb-md-4">
                 {/* Header Bienvenida */}
                 <div className="row mb-4">
                     <div className="col-12">
@@ -453,7 +454,7 @@ const ClientDashboardPage: FC = () => {
 
                 {/* Tabs de Pedidos */}
                 <div className="card border-0 shadow-sm bg-body">
-                    <div className="card-header bg-transparent border-bottom-0 pt-4 px-4">
+                    <div className="card-header bg-transparent border-bottom-0 pt-4 px-4 d-none d-md-block">
                         <ul className="nav nav-tabs card-header-tabs">
                             <li className="nav-item">
                                 <button 
@@ -640,43 +641,70 @@ const ClientDashboardPage: FC = () => {
                                 <div className="row g-0">
                                     {/* Lista de Productos */}
                                     <div className="col-lg-8 border-end p-4">
-                                        <div className="d-flex justify-content-between align-items-center mb-4">
+                                        <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
                                             <h5 className="fw-bold mb-0">Nuestro Menú</h5>
-                                            <div className="d-flex gap-2 overflow-auto pb-1" style={{maxWidth: '60%'}}>
-                                            {['Todas', ...Array.from(new Set(products.map(p => p.category)))].map(cat => (
-                                                <button 
-                                                    key={cat}
-                                                    onClick={() => setSelectedCategory(cat)}
-                                                    className={`btn btn-sm rounded-pill px-3 ${selectedCategory === cat ? 'btn-primary' : 'btn-outline-secondary border-0 bg-body-tertiary'}`}
-                                                    style={selectedCategory === cat ? {backgroundColor: tenant.theme.primaryColor, borderColor: tenant.theme.primaryColor} : {}}
-                                                >
-                                                    {cat}
-                                                </button>
-                                            ))}
+                                            <div 
+                                                className="d-flex gap-2 overflow-auto pb-2 hide-scrollbar" 
+                                                style={{ 
+                                                    maxWidth: '100%',
+                                                    scrollbarWidth: 'none',
+                                                    msOverflowStyle: 'none'
+                                                }}
+                                            >
+                                                {['Todas', ...Array.from(new Set(products.map(p => p.category)))].map(cat => (
+                                                    <button 
+                                                        key={cat}
+                                                        onClick={() => { setSelectedCategory(cat); setVisibleProductsCount(6); }}
+                                                        className={`btn btn-sm rounded-pill px-3 text-nowrap ${selectedCategory === cat ? 'btn-primary' : 'btn-outline-secondary border-0 bg-body-tertiary'}`}
+                                                        style={selectedCategory === cat ? {backgroundColor: tenant.theme.primaryColor, borderColor: tenant.theme.primaryColor} : {}}
+                                                    >
+                                                        {cat}
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
                                     <div className="row g-3">
                                         {products.length > 0 ? (
-                                            products.filter(p => selectedCategory === 'Todas' || p.category === selectedCategory).map(product => (
-                                                <div key={product.id} className="col-md-6 col-xl-4">
-                                                    <div className="card border-0 shadow-sm h-100 bg-body-tertiary">
-                                                        <div className="card-body p-3">
-                                                            <div className="d-flex justify-content-between align-items-start mb-2">
-                                                                <h6 className="fw-bold mb-0 text-truncate" style={{maxWidth: '70%'}}>{product.name}</h6>
-                                                                <span className="badge bg-primary bg-opacity-10 text-primary">{formatCurrency(product.price)}</span>
+                                            (() => {
+                                                const filtered = products.filter(p => selectedCategory === 'Todas' || p.category === selectedCategory);
+                                                const visible = filtered.slice(0, visibleProductsCount);
+                                                return (
+                                                    <>
+                                                        {visible.map(product => (
+                                                            <div key={product.id} className="col-md-6 col-xl-4">
+                                                                <div className="card border-0 shadow-sm h-100 bg-body-tertiary">
+                                                                    <div className="card-body p-3">
+                                                                        <div className="d-flex justify-content-between align-items-start mb-2">
+                                                                            <h6 className="fw-bold mb-0 text-truncate" style={{maxWidth: '70%'}}>{product.name}</h6>
+                                                                            <span className="badge bg-primary bg-opacity-10 text-primary">{formatCurrency(product.price)}</span>
+                                                                        </div>
+                                                                        <p className="small text-muted mb-3 text-truncate-2" style={{height: '40px'}}>{product.description}</p>
+                                                                        <button 
+                                                                            className="btn btn-sm w-100 fw-bold rounded-pill" 
+                                                                            style={{backgroundColor: tenant.theme.primaryColor, color: '#fff'}}
+                                                                            onClick={() => addToCart(product)}
+                                                                        >
+                                                                            <Plus className="me-1"/> Agregar
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                            <p className="small text-muted mb-3 text-truncate-2" style={{height: '40px'}}>{product.description}</p>
-                                                            <button 
-                                                                className="btn btn-sm w-100 fw-bold rounded-pill" 
-                                                                style={{backgroundColor: tenant.theme.primaryColor, color: '#fff'}}
-                                                                onClick={() => addToCart(product)}
-                                                            >
-                                                                <Plus className="me-1"/> Agregar
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))
+                                                        ))}
+                                                        {filtered.length > visibleProductsCount && (
+                                                            <div className="col-12 text-center mt-4">
+                                                                <button 
+                                                                    type="button" 
+                                                                    className="btn btn-outline-primary rounded-pill px-4 fw-bold"
+                                                                    style={{ borderColor: tenant.theme.primaryColor, color: tenant.theme.primaryColor }}
+                                                                    onClick={() => setVisibleProductsCount(prev => prev + 6)}
+                                                                >
+                                                                    Ver más productos
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                );
+                                            })()
                                         ) : (
                                             <div className="col-12 text-center py-5">
                                                 <p className="text-secondary">No hay productos disponibles en este momento.</p>
@@ -1016,6 +1044,61 @@ const ClientDashboardPage: FC = () => {
                     </div>
                 </div>
             )}
+
+            {/* Barra de navegación inferior móvil estilo Instagram */}
+            <div className="d-md-none fixed-bottom bg-body border-top shadow-lg py-2 px-3 z-3">
+                <div className="d-flex justify-content-around align-items-center">
+                    <button
+                        onClick={() => setActiveTab('order')}
+                        className={`btn btn-link p-1 d-flex flex-column align-items-center text-decoration-none border-0 ${activeTab === 'order' ? 'text-primary fw-bold' : 'text-secondary'}`}
+                        style={{ fontSize: '0.7rem', width: '20%' }}
+                    >
+                        <CartFill size={20} className="mb-1" />
+                        <span>Pedir</span>
+                    </button>
+
+                    <button
+                        onClick={() => setActiveTab('pending')}
+                        className={`btn btn-link p-1 d-flex flex-column align-items-center text-decoration-none border-0 position-relative ${activeTab === 'pending' ? 'text-primary fw-bold' : 'text-secondary'}`}
+                        style={{ fontSize: '0.7rem', width: '20%' }}
+                    >
+                        <Receipt size={20} className="mb-1" />
+                        {pendingOrders.length > 0 && (
+                            <span className="position-absolute top-0 start-50 translate-middle-x badge rounded-pill bg-danger" style={{ fontSize: '0.55rem', transform: 'translate(10px, -2px)' }}>
+                                {pendingOrders.length}
+                            </span>
+                        )}
+                        <span>Pendientes</span>
+                    </button>
+
+                    <button
+                        onClick={() => setActiveTab('history')}
+                        className={`btn btn-link p-1 d-flex flex-column align-items-center text-decoration-none border-0 ${activeTab === 'history' ? 'text-primary fw-bold' : 'text-secondary'}`}
+                        style={{ fontSize: '0.7rem', width: '20%' }}
+                    >
+                        <ClockHistory size={20} className="mb-1" />
+                        <span>Historial</span>
+                    </button>
+
+                    <button
+                        onClick={() => setActiveTab('debt_payments')}
+                        className={`btn btn-link p-1 d-flex flex-column align-items-center text-decoration-none border-0 ${activeTab === 'debt_payments' ? 'text-primary fw-bold' : 'text-secondary'}`}
+                        style={{ fontSize: '0.7rem', width: '20%' }}
+                    >
+                        <Wallet2 size={20} className="mb-1" />
+                        <span>Abonos</span>
+                    </button>
+
+                    <button
+                        onClick={() => { setProfileSuccess(''); setProfileError(''); setActiveTab('profile'); }}
+                        className={`btn btn-link p-1 d-flex flex-column align-items-center text-decoration-none border-0 ${activeTab === 'profile' ? 'text-primary fw-bold' : 'text-secondary'}`}
+                        style={{ fontSize: '0.7rem', width: '20%' }}
+                    >
+                        <PersonCircle size={20} className="mb-1" />
+                        <span>Perfil</span>
+                    </button>
+                </div>
+            </div>
 
             <style>{`
                 .hover-card:hover { transform: translateY(-4px); box-shadow: 0 .5rem 1.5rem rgba(0,0,0,.15)!important; }

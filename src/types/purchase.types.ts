@@ -23,6 +23,9 @@ export interface PurchaseItem {
     quantity: number;
     unitCost: number;
     consumptionUnitsPerPurchaseUnit: number;
+    // Proveedor por ítem (para compras con múltiples proveedores)
+    supplierId?: string;
+    supplierName?: string;
 }
 
 export interface Purchase {
