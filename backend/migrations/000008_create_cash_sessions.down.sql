@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS cash_session_expenses CASCADE;
+DROP TABLE IF EXISTS expenses CASCADE;
+DROP TABLE IF EXISTS cash_sessions CASCADE;

@@ -61,65 +61,76 @@ const App: FC = () => {
     });
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            if (currentUser) {
+        const checkLocalAuth = async () => {
+            const savedUserJson = localStorage.getItem("authenticated_user");
+            if (savedUserJson) {
                 try {
-                    const profileData = await getUserProfileData(currentUser.uid);
+                    const parsedUser = JSON.parse(savedUserJson);
                     
-                    if (!profileData) {
-                        console.warn(`Perfil no encontrado para el usuario ${currentUser.uid}, podría estar en proceso de registro.`);
-                    }
-
+                    // Crear heladería mock si el usuario es owner/employee para evitar dependencias con Firestore
                     let heladerias: Heladeria[] = [];
-                    try {
-                        // Solo buscamos heladerías por membresía para dueños/empleados.
-                        if (profileData && profileData.role !== 'client') {
-                            heladerias = await getHeladeriasByUserId(currentUser.uid);
-                        }
-                    } catch (error) {
-                        console.warn("No se pudieron obtener las heladerías:", error);
+                    if (parsedUser.role !== 'client') {
+                        const mockHeladeria: Heladeria = {
+                            id: "mock-shop-id-123",
+                            name: "Mi Heladería Local",
+                            owner: parsedUser.uid,
+                            timezone: "America/Bogota",
+                            createdAt: Timestamp.fromDate(new Date()),
+                            theme: {
+                                primaryColor: "#0d6efd",
+                                secondaryColor: "#6c757d"
+                            },
+                            terminology: {
+                                shopLabel: "Heladería",
+                                productLabel: "Producto"
+                            },
+                            members: {
+                                [parsedUser.uid]: {
+                                    roleId: "owner-role-id",
+                                    role: "owner",
+                                    email: parsedUser.email,
+                                    addedAt: Timestamp.fromDate(new Date()),
+                                    permissions: {
+                                        shop_details_manage: true,
+                                        pos_access: true,
+                                        ingredients_view: true,
+                                        products_view: true,
+                                        purchases_view: true,
+                                        team_view: true,
+                                        promotions_view: true,
+                                        suppliers_view: true,
+                                        reports_view_sales: true,
+                                        cash_session_access: true,
+                                        expenses_view: true
+                                    }
+                                }
+                            }
+                        };
+                        heladerias = [mockHeladeria];
                     }
 
-                    let userPermissions: string[] = [];
-                    // Los permisos vienen directamente del perfil del miembro en la heladería.
-                    if (heladerias.length > 0 && currentUser) {
-                        const memberData = heladerias[0].members?.[currentUser.uid];
-                        const permissionsMap = memberData?.permissions || {};
-                        userPermissions = Object.keys(permissionsMap).filter(key => permissionsMap[key] === true);
-                    }
-
-                    // Verificación de horario para empleados
-                    const memberProfile = heladerias[0]?.members?.[currentUser.uid];
-                    if (profileData?.role === 'employee' && memberProfile) {
-                        if (!checkSchedule(memberProfile.workSchedule, memberProfile.scheduleExceptions)) {
-                            console.warn("Acceso fuera de horario autorizado. Se cerrará la sesión.");
-                            auth.signOut();
-                            return;
-                        }
-                    }
-
+                    // Completamos el perfil del usuario para el store
                     const fullUserProfile = {
-                        ...currentUser,
-                        ...profileData,
-                        firstName: profileData?.firstName ?? '',
-                        lastName: profileData?.lastName ?? '',
-                        email: currentUser.email ?? '',
-                        role: profileData?.role ?? 'employee',
-                        identify: profileData?.identify ?? '',
-                        phone: profileData?.phone ?? '',
-                        photoURL: profileData?.photoURL ?? currentUser.photoURL,
-                        createdAt: profileData?.createdAt ?? Timestamp.fromDate(new Date(currentUser.metadata.creationTime!)),
-                        iceCreamShopIds: profileData?.role === 'client' 
-                            ? (profileData.iceCreamShopIds || []) 
+                        uid: parsedUser.uid,
+                        id: parsedUser.id,
+                        firstName: parsedUser.firstName,
+                        lastName: parsedUser.lastName,
+                        email: parsedUser.email,
+                        role: parsedUser.role,
+                        identify: parsedUser.identify,
+                        phone: parsedUser.phone,
+                        photoURL: parsedUser.photoURL || "",
+                        createdAt: Timestamp.fromDate(new Date()),
+                        iceCreamShopIds: parsedUser.role === 'client' 
+                            ? [] 
                             : heladerias.map(h => h.id),
-                        permissions: userPermissions,
+                        permissions: parsedUser.permissions || [],
                     };
 
                     setAuthUser(fullUserProfile);
                     setUserIceCreamShop(heladerias);
-
                 } catch (error) {
-                    console.error("Error crítico loading data:", error);
+                    console.error("Error cargando sesión local:", error);
                     setAuthUser(null);
                     setUserIceCreamShop([]);
                 } finally {
@@ -131,8 +142,9 @@ const App: FC = () => {
                 setInitialRedirectDone(false);
                 setLoading(false);
             }
-        });
-        return () => unsubscribe();
+        };
+
+        checkLocalAuth();
     }, [setAuthUser, setUserIceCreamShop, setLoading]);
 
     // Se activa cuando el usuario se carga en el store.

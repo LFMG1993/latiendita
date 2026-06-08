@@ -1,0 +1,3 @@
+ALTER TABLE shop_members DROP CONSTRAINT IF EXISTS fk_shop_members_role;
+DROP TABLE IF EXISTS role_permissions CASCADE;
+DROP TABLE IF EXISTS roles CASCADE;

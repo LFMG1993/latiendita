@@ -1,0 +1,18 @@
+FROM golang:1.23-alpine
+
+# Install git and other utilities needed for live reloading / Instalar git y utilidades de recarga en vivo
+RUN apk add --no-cache git curl build-base
+
+# Install Air for hot-reloading / Instalar Air para recarga en caliente
+RUN go install github.com/air-verse/air@v1.61.1
+
+WORKDIR /app
+
+# Copy dependency manifests first / Copiar manifiestos de dependencias primero
+COPY go.mod ./
+RUN go mod download
+
+EXPOSE 8080
+
+# Run air watcher / Ejecutar el vigilante de Air
+CMD ["air", "-c", ".air.toml"]

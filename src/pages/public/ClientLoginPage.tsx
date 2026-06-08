@@ -1,8 +1,7 @@
 import {useState, FC, FormEvent} from 'react';
 import {Link, useSearchParams} from 'react-router-dom';
-import {auth} from '../../firebase.ts';
-import {signInWithEmailAndPassword} from 'firebase/auth';
-import {getClientEmailByDocumentId} from '../../services/authServices';
+import {loginUser} from '../../services/authServices';
+import {useAuthStore} from '../../store/authStore.ts';
 import '../../style/Login.css';
 import { useTenant } from '../../context/TenantContext';
 
@@ -13,6 +12,7 @@ const ClientLoginPage: FC = () => {
     const [loading, setLoading] = useState(false);
     const [searchParams] = useSearchParams();
     const { tenant } = useTenant();
+    const { setAuthUser } = useAuthStore();
 
     const redirectUrl = searchParams.get('redirect') || '/client/dashboard';
 
@@ -21,28 +21,14 @@ const ClientLoginPage: FC = () => {
         setError('');
         setLoading(true);
         try {
-            // 1. Buscar el email del cliente por su cédula
-            const email = await getClientEmailByDocumentId(documentId);
-            if (!email) {
-                setError('No se encontró ningún cliente con ese documento de identidad.');
-                setLoading(false);
-                return;
-            }
-
-            // 2. Iniciar sesión con email + contraseña
-            await signInWithEmailAndPassword(auth, email, password);
-            // App.tsx detectará el login y redirigirá según el rol.
+            // Iniciar sesión con documento de identidad + contraseña en el backend de Go
+            const userData = await loginUser(documentId, password);
+            
+            // Actualizamos la sesión en el store
+            setAuthUser(userData);
         } catch (err: any) {
             console.error("Error en el login:", err);
-            if (
-                err.code === 'auth/wrong-password' ||
-                err.code === 'auth/invalid-credential' ||
-                err.code === 'auth/user-not-found'
-            ) {
-                setError('Contraseña incorrecta. Inténtalo de nuevo.');
-            } else {
-                setError('Error al iniciar sesión. Inténtalo de nuevo.');
-            }
+            setError(err.message || 'Contraseña incorrecta. Inténtalo de nuevo.');
             setLoading(false);
         }
     };

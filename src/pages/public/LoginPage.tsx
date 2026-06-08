@@ -1,8 +1,7 @@
 import {useState, FC, FormEvent, ChangeEvent, useEffect} from 'react';
 import {Link} from 'react-router-dom';
-import {auth, db} from '../../firebase.ts';
-import {signInWithEmailAndPassword, signOut} from 'firebase/auth';
-import {doc, getDoc} from 'firebase/firestore';
+import {loginUser, logoutUser} from '../../services/authServices.ts';
+import {useAuthStore} from '../../store/authStore.ts';
 import '../../style/Login.css';
 
 const LoginPage: FC = () => {
@@ -11,6 +10,7 @@ const LoginPage: FC = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [stage, setStage] = useState<'idle' | 'expanding' | 'ready'>('idle');
+    const {setAuthUser} = useAuthStore();
 
     useEffect(() => {
         // Start expanding after a tiny delay
@@ -29,29 +29,23 @@ const LoginPage: FC = () => {
         setError('');
         setLoading(true);
         try {
-            const credential = await signInWithEmailAndPassword(auth, email, password);
+            const userData = await loginUser(email, password);
 
             // Verificar que el usuario NO sea un cliente.
             // Los clientes tienen su propio portal de acceso con documento de identidad.
-            const userDocRef = doc(db, 'users', credential.user.uid);
-            const userSnap = await getDoc(userDocRef);
-            const role = userSnap.data()?.role;
-
-            if (role === 'client') {
-                // Es un cliente: cerrar sesión y mostrar error.
-                await signOut(auth);
+            if (userData.role === 'client') {
+                // Es un cliente: cerrar sesión local y mostrar error.
+                logoutUser();
                 setError('Este portal es solo para administradores y empleados. Si eres cliente, utiliza el acceso de clientes.');
                 setLoading(false);
                 return;
             }
 
-        } catch (err) {
-            const error = err as { code?: string };
-            if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-                setError('El correo electrónico o la contraseña son incorrectos.');
-            } else {
-                setError('Ocurrió un error al intentar iniciar sesión. Por favor, inténtalo de nuevo.');
-            }
+            // Actualizamos la sesión en el store
+            setAuthUser(userData);
+
+        } catch (err: any) {
+            setError(err.message || 'El correo electrónico o la contraseña son incorrectos.');
             console.error("Error en el login:", err);
             setLoading(false);
         }

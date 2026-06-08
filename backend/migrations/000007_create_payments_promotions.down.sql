@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS promotion_items CASCADE;
+DROP TABLE IF EXISTS promotions CASCADE;
+DROP TABLE IF EXISTS payment_methods CASCADE;

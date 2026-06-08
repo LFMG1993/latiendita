@@ -1,79 +1,41 @@
-import {auth, db} from "../firebase.js";
-import {createUserWithEmailAndPassword, updateProfile, User, deleteUser} from "firebase/auth";
-import {doc, collection, writeBatch, serverTimestamp, query, where, getDocs} from "firebase/firestore";
 import {RegisterFormData} from "../types";
 
+// Base URL of the Go API server
+// URL base del servidor API en Go
+const API_BASE_URL = "http://localhost:8080/api";
+
 /**
- * Registra un nuevo usuario en Firebase Authentication y crea sus documentos
- * de usuario y heladería asociados en Firestore usando una transacción batch.
+ * Registra un nuevo usuario propietario en el backend de Go.
  */
-export const registerUser = async (formData: RegisterFormData): Promise<User> => {
-    let user: User | null = null;
+export const registerUser = async (formData: RegisterFormData): Promise<any> => {
     try {
-        // Registro en Authentication
-        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-        user = userCredential.user;
-
-        // Usamos un batch para asegurar que todas las escrituras se realicen o ninguna
-        const batch = writeBatch(db);
-
-        // Creamos el documento de la heladería
-        const heladeriaRef = doc(collection(db, "iceCreamShops"));
-        const iceCreamShopDocData = {
-            name: formData.iceCreamShopName,
-            owner: user.uid,
-            timezone: formData.timezone,
-            createdAt: serverTimestamp(),
-            // Añadimos el mapa de miembros con el propietario como primer miembro.
-            members: {
-                [user.uid]: {
-                    role: 'owner',
-                    addedAt: serverTimestamp()
-                }
-            }
-        };
-        batch.set(heladeriaRef, iceCreamShopDocData);
-
-        // Creamos el documento del usuario con la referencia a su heladería
-        const usuarioRef = doc(db, "users", user.uid);
-        const userDocData: { [key: string]: any } = {
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            email: formData.email,
-            role: 'owner',
-            identify: formData.identify,
-            phone: formData.phone,
-            createdAt: serverTimestamp(),
-            iceCreamShopIds: [heladeriaRef.id]
-        };
-        batch.set(usuarioRef, userDocData);
-
-        await batch.commit();
-
-        await updateProfile(user, {
-            displayName: `${formData.firstName} ${formData.lastName}`.trim()
+        const response = await fetch(`${API_BASE_URL}/users`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                first_name: formData.firstName,
+                last_name: formData.lastName,
+                email: formData.email,
+                password: formData.password, // Pasamos la contraseña para cifrarla en el backend
+                identify: formData.identify,
+                phone: formData.phone,
+                role: "owner"
+            })
         });
 
-        return user!;
-    } catch (err) {
-        // Si algo falla después de crear el usuario en Auth, lo borramos para revertir la operación.
-        if (user) {
-            await deleteUser(user);
-            console.log('Usuario de Auth revertido debido a un fallo en la creación de documentos.');
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || "Error registrando usuario en el servidor.");
         }
-        console.error("Error registrando el usuario: ", err);
-        const error = err as { code?: string };
 
-        if (error.code === 'auth/email-already-in-use') {
-            throw new Error('Este correo electrónico ya está registrado.');
-        }
-        if (error.code === 'auth/weak-password') {
-            throw new Error('La contraseña debe tener al menos 6 caracteres.');
-        }
-        if (error.code === 'auth/invalid-email') {
-            throw new Error('El formato del correo electrónico no es válido.');
-        }
-        throw new Error('Ocurrió un error inesperado al registrar el usuario.');
+        const data = await response.json();
+        console.log("Usuario registrado con éxito en el Backend:", data);
+        return data;
+    } catch (err: any) {
+        console.error("Error registrando el usuario: ", err);
+        throw new Error(err.message || 'Ocurrió un error inesperado al registrar el usuario.');
     }
 };
 
@@ -88,76 +50,116 @@ export interface ClientRegisterData {
 }
 
 /**
- * Registra un nuevo CLIENTE (comprador final) en Firebase Auth y Firestore.
- * NO crea heladería. Asigna rol 'client'.
+ * Registra un nuevo CLIENTE (comprador final) en el backend de Go.
  */
-export const registerClient = async (formData: ClientRegisterData): Promise<User> => {
-    let user: User | null = null;
+export const registerClient = async (formData: ClientRegisterData): Promise<any> => {
     try {
-        // 0. Verificar si la cédula ya está registrada para algún cliente en Firestore
-        const existingEmail = await getClientEmailByDocumentId(formData.documentId);
-        if (existingEmail) {
-            throw new Error('Este documento de identidad ya está registrado.');
-        }
-
-        // 1. Crear Auth User
-        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-        user = userCredential.user;
-
-        // 2. Crear documento de usuario en Firestore
-        const userRef = doc(db, "users", user.uid);
-        const userDocData = {
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            email: formData.email,
-            role: 'client', // Rol específico para clientes
-            phone: formData.phone,
-            documentId: formData.documentId, // Guardamos la cédula
-            createdAt: serverTimestamp(),
-            iceCreamShopIds: formData.shopId ? [formData.shopId] : [] // Asociamos tienda inicial si existe
-        };
-        
-        await writeBatch(db).set(userRef, userDocData).commit();
-
-        // 3. Update Auth Profile
-        await updateProfile(user, {
-            displayName: `${formData.firstName} ${formData.lastName}`.trim()
+        const response = await fetch(`${API_BASE_URL}/users`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                first_name: formData.firstName,
+                last_name: formData.lastName,
+                email: formData.email,
+                password: formData.password, // Pasamos la contraseña para cifrarla en el backend
+                identify: "CC",
+                document_id: formData.documentId,
+                phone: formData.phone,
+                role: "client"
+            })
         });
 
-        return user;
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || "Error registrando cliente en el servidor.");
+        }
+
+        const data = await response.json();
+        console.log("Cliente registrado con éxito en el Backend:", data);
+        return data;
     } catch (err: any) {
-        if (err.message === 'Este documento de identidad ya está registrado.') {
-            throw err;
-        }
-
-        if (user) {
-            await deleteUser(user);
-             console.log('Usuario de Auth revertido (Client) debido a un fallo en la creación de documentos.');
-        }
         console.error("Error registrando cliente: ", err);
-        const error = err as { code?: string };
-
-        if (error.code === 'auth/email-already-in-use') throw new Error('Este correo electrónico ya está registrado.');
-        if (error.code === 'auth/weak-password') throw new Error('La contraseña debe tener al menos 6 caracteres.');
-        if (error.code === 'auth/invalid-email') throw new Error('El formato del correo electrónico no es válido.');
-        
-        throw new Error('Ocurrió un error inesperado al registrar el cliente.');
+        throw new Error(err.message || 'Ocurrió un error inesperado al registrar el cliente.');
     }
 };
 
 /**
- * Busca el correo electrónico de un cliente en Firestore usando su número de documento.
- * Retorna el email si lo encuentra, o null si no existe.
+ * Autentica a un usuario contra el backend de Go y persiste los datos en localStorage.
+ */
+export const loginUser = async (email: string, password: string): Promise<any> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/login`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                email: email,
+                password: password
+            })
+        });
+
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || "Correo o contraseña incorrectos / Invalid credentials");
+        }
+
+        const data = await response.json();
+        
+        // Mapeamos los campos de snake_case del backend Go a camelCase requeridos por el frontend de React
+        const mappedUser = {
+            uid: data.id,
+            id: data.id,
+            firstName: data.first_name || "",
+            lastName: data.last_name || "",
+            email: data.email || "",
+            identify: data.identify || "",
+            documentId: data.document_id || "",
+            phone: data.phone || "",
+            role: data.role || "client",
+            photoURL: data.photo_url || "",
+            // Para el modo desarrollo y pruebas locales inyectamos todos los permisos al rol de propietario (owner)
+            permissions: data.role === "owner" ? [
+                "shop_details_manage",
+                "pos_access",
+                "ingredients_view",
+                "products_view",
+                "purchases_view",
+                "team_view",
+                "promotions_view",
+                "suppliers_view",
+                "reports_view_sales",
+                "cash_session_access",
+                "expenses_view"
+            ] : []
+        };
+
+        // Guardamos el usuario de forma persistente en localStorage para mantener la sesión activa
+        localStorage.setItem("authenticated_user", JSON.stringify(mappedUser));
+        console.log("Sesión iniciada con éxito en el Backend:", mappedUser);
+        return mappedUser;
+    } catch (err: any) {
+        console.error("Error en el login:", err);
+        throw new Error(err.message || "Error al conectar con el servidor de autenticación.");
+    }
+};
+
+
+
+/**
+ * Cierra la sesión activa borrando los datos de localStorage.
+ */
+export const logoutUser = (): void => {
+    localStorage.removeItem("authenticated_user");
+    console.log("Sesión cerrada y removida de localStorage.");
+};
+
+/**
+ * Busca si un documento ya existe. Retorna null por defecto para permitir
+ * el registro paso a paso mientras no implementemos consultas en Go.
  */
 export const getClientEmailByDocumentId = async (documentId: string): Promise<string | null> => {
-    try {
-        const usersRef = collection(db, 'users');
-        const q = query(usersRef, where('role', '==', 'client'), where('documentId', '==', documentId.trim()));
-        const snap = await getDocs(q);
-        if (snap.empty) return null;
-        return snap.docs[0].data().email as string;
-    } catch (err) {
-        console.error('Error buscando cliente por documento:', err);
-        return null;
-    }
+    return null;
 };

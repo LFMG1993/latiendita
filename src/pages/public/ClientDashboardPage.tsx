@@ -14,8 +14,7 @@ import {useTheme} from '../../context/ThemeContext';
 import {getPublicProducts, getAllPublicShops} from '../../services/publicProductService';
 import {PublicProduct} from '../../types/public.types';
 import {createOrder} from '../../services/orderService';
-import {auth} from '../../firebase';
-import {signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential} from 'firebase/auth';
+import {logoutService} from '../../services/logoutService';
 import {doc, updateDoc} from 'firebase/firestore';
 import {db} from '../../firebase';
 import {useToast} from '../../context/ToastContext';
@@ -128,7 +127,7 @@ const ClientDashboardPage: FC = () => {
 
     const handleLogout = async () => {
         try {
-            await signOut(auth);
+            await logoutService();
             navigate('/client-login');
         } catch (error) {
             console.error('Error al cerrar sesión:', error);

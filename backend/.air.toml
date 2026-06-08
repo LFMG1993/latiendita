@@ -1,0 +1,34 @@
+# Config file for [Air](https://github.com/air-verse/air) in TOML format
+
+# Working directory / Directorio de trabajo
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  # Just plain old go build / Compilación de Go simple
+  cmd = "go build -o ./tmp/main ."
+  # Binary file path / Ruta del archivo binario compilado
+  bin = "./tmp/main"
+  # Watch these filename extensions / Monitorear estas extensiones de archivo
+  include_ext = ["go", "tpl", "html", "toml"]
+  # Ignore these directories / Ignorar estos directorios
+  exclude_dir = ["assets", "tmp", "vendor", "test"]
+  # Delay before rebuilding / Retraso antes de compilar
+  delay = 1000 # ms
+  # Stop rebuilding if error occurs / Detener compilación si ocurre un error
+  stop_on_error = true
+  # Send Interrupt signal instead of Kill / Enviar señal de interrupción en vez de matar el proceso
+  send_interrupt = true
+
+[color]
+  app = ""
+  build = "yellow"
+  main = "magenta"
+  runner = "green"
+  watcher = "cyan"
+
+[log]
+  time = false
+
+[misc]
+  clean_on_exit = true

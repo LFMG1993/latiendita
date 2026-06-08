@@ -1,0 +1,399 @@
+package handlers
+
+import (
+	"database/sql"
+	"encoding/json"
+	"log"
+	"net/http"
+	"strings"
+	"time"
+
+	"backend/models"
+)
+
+// ShopHandler handles shop-related HTTP requests
+// ShopHandler maneja las solicitudes HTTP relacionadas con las tiendas
+type ShopHandler struct {
+	DB *sql.DB
+}
+
+// NewShopHandler creates a new instance of ShopHandler
+func NewShopHandler(db *sql.DB) *ShopHandler {
+	return &ShopHandler{DB: db}
+}
+
+// defaultOwnerPermissions returns the full set of permissions for a shop owner
+// defaultOwnerPermissions retorna el conjunto completo de permisos para un dueño de tienda
+func defaultOwnerPermissions() map[string]bool {
+	return map[string]bool{
+		"shop_details_manage":  true,
+		"pos_access":           true,
+		"ingredients_view":     true,
+		"products_view":        true,
+		"purchases_view":       true,
+		"team_view":            true,
+		"promotions_view":      true,
+		"suppliers_view":       true,
+		"reports_view_sales":   true,
+		"cash_session_access":  true,
+		"expenses_view":        true,
+	}
+}
+
+// CreateShop handles POST /api/shops
+// Creates a new shop and registers the owner as a member with full permissions
+func (h *ShopHandler) CreateShop(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var shop models.Shop
+	if err := json.NewDecoder(r.Body).Decode(&shop); err != nil {
+		jsonError(w, "Invalid JSON format", http.StatusBadRequest)
+		return
+	}
+
+	shop.Name = strings.TrimSpace(shop.Name)
+	shop.OwnerID = strings.TrimSpace(shop.OwnerID)
+
+	if shop.Name == "" || shop.OwnerID == "" {
+		jsonError(w, "Fields 'name' and 'owner_id' are required", http.StatusBadRequest)
+		return
+	}
+
+	// Set defaults
+	if shop.Timezone == "" {
+		shop.Timezone = "America/Bogota"
+	}
+	if shop.ThemePrimaryColor == "" {
+		shop.ThemePrimaryColor = "#0d6efd"
+	}
+	if shop.ThemeSecondaryColor == "" {
+		shop.ThemeSecondaryColor = "#6c757d"
+	}
+	if shop.TerminologyShopLabel == "" {
+		shop.TerminologyShopLabel = "Tienda"
+	}
+	if shop.TerminologyProductLabel == "" {
+		shop.TerminologyProductLabel = "Producto"
+	}
+
+	// Default empty JSONB
+	modulesJSON := json.RawMessage(`{}`)
+	featuresJSON := json.RawMessage(`{}`)
+	if shop.Modules != nil {
+		modulesJSON = shop.Modules
+	}
+	if shop.Features != nil {
+		featuresJSON = shop.Features
+	}
+
+	// Begin transaction
+	tx, err := h.DB.Begin()
+	if err != nil {
+		log.Printf("Error starting transaction: %v", err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	// Insert shop
+	shopQuery := `
+		INSERT INTO shops (
+			name, address, photo_url, whatsapp, owner_id, timezone, business_type_id,
+			theme_primary_color, theme_secondary_color, theme_logo_url,
+			terminology_shop_label, terminology_product_label,
+			modules, features
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+		RETURNING id, created_at, updated_at
+	`
+
+	var createdAt, updatedAt time.Time
+	err = tx.QueryRow(
+		shopQuery,
+		shop.Name, shop.Address, shop.PhotoURL, shop.WhatsApp,
+		shop.OwnerID, shop.Timezone, shop.BusinessTypeID,
+		shop.ThemePrimaryColor, shop.ThemeSecondaryColor, shop.ThemeLogoURL,
+		shop.TerminologyShopLabel, shop.TerminologyProductLabel,
+		modulesJSON, featuresJSON,
+	).Scan(&shop.ID, &createdAt, &updatedAt)
+	if err != nil {
+		log.Printf("Error inserting shop: %v", err)
+		jsonError(w, "Error creating shop", http.StatusInternalServerError)
+		return
+	}
+	shop.CreatedAt = &createdAt
+	shop.UpdatedAt = &updatedAt
+
+	// Add owner as shop member with full permissions
+	permissionsJSON, _ := json.Marshal(defaultOwnerPermissions())
+	memberQuery := `
+		INSERT INTO shop_members (shop_id, user_id, role, permissions)
+		VALUES ($1, $2, 'owner', $3)
+	`
+	if _, err := tx.Exec(memberQuery, shop.ID, shop.OwnerID, permissionsJSON); err != nil {
+		log.Printf("Error inserting shop member: %v", err)
+		jsonError(w, "Error creating shop membership", http.StatusInternalServerError)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		log.Printf("Error committing transaction: %v", err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(shop)
+}
+
+// GetShopsByOwner handles GET /api/shops?owner_id=xxx
+// Returns all shops belonging to an owner
+func (h *ShopHandler) GetShopsByOwner(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	ownerID := r.URL.Query().Get("owner_id")
+	if ownerID == "" {
+		jsonError(w, "owner_id query parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	query := `
+		SELECT id, name, address, photo_url, whatsapp, owner_id, timezone, business_type_id,
+		       theme_primary_color, theme_secondary_color, theme_logo_url,
+		       terminology_shop_label, terminology_product_label,
+		       modules, features, created_at, updated_at
+		FROM shops
+		WHERE owner_id = $1
+		ORDER BY created_at ASC
+	`
+	rows, err := h.DB.Query(query, ownerID)
+	if err != nil {
+		log.Printf("Error querying shops: %v", err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	shops := []models.Shop{}
+	for rows.Next() {
+		var s models.Shop
+		var createdAt, updatedAt time.Time
+		var modulesJSON, featuresJSON []byte
+		if err := rows.Scan(
+			&s.ID, &s.Name, &s.Address, &s.PhotoURL, &s.WhatsApp,
+			&s.OwnerID, &s.Timezone, &s.BusinessTypeID,
+			&s.ThemePrimaryColor, &s.ThemeSecondaryColor, &s.ThemeLogoURL,
+			&s.TerminologyShopLabel, &s.TerminologyProductLabel,
+			&modulesJSON, &featuresJSON,
+			&createdAt, &updatedAt,
+		); err != nil {
+			log.Printf("Error scanning shop row: %v", err)
+			continue
+		}
+		s.Modules = modulesJSON
+		s.Features = featuresJSON
+		s.CreatedAt = &createdAt
+		s.UpdatedAt = &updatedAt
+		shops = append(shops, s)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(shops)
+}
+
+// GetShopByID handles GET /api/shops/{id}
+func (h *ShopHandler) GetShopByID(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract ID from path: /api/shops/{id}
+	id := strings.TrimPrefix(r.URL.Path, "/api/shops/")
+	id = strings.TrimSpace(id)
+	if id == "" {
+		jsonError(w, "Shop ID is required", http.StatusBadRequest)
+		return
+	}
+
+	query := `
+		SELECT id, name, address, photo_url, whatsapp, owner_id, timezone, business_type_id,
+		       theme_primary_color, theme_secondary_color, theme_logo_url,
+		       terminology_shop_label, terminology_product_label,
+		       modules, features, created_at, updated_at
+		FROM shops WHERE id = $1
+	`
+	var s models.Shop
+	var createdAt, updatedAt time.Time
+	var modulesJSON, featuresJSON []byte
+
+	err := h.DB.QueryRow(query, id).Scan(
+		&s.ID, &s.Name, &s.Address, &s.PhotoURL, &s.WhatsApp,
+		&s.OwnerID, &s.Timezone, &s.BusinessTypeID,
+		&s.ThemePrimaryColor, &s.ThemeSecondaryColor, &s.ThemeLogoURL,
+		&s.TerminologyShopLabel, &s.TerminologyProductLabel,
+		&modulesJSON, &featuresJSON,
+		&createdAt, &updatedAt,
+	)
+	if err == sql.ErrNoRows {
+		jsonError(w, "Shop not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		log.Printf("Error querying shop: %v", err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	s.Modules = modulesJSON
+	s.Features = featuresJSON
+	s.CreatedAt = &createdAt
+	s.UpdatedAt = &updatedAt
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(s)
+}
+
+// UpdateShop handles PUT /api/shops/{id}
+// Updates shop branding, name, address, terminology, etc.
+func (h *ShopHandler) UpdateShop(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id := strings.TrimPrefix(r.URL.Path, "/api/shops/")
+	id = strings.TrimSpace(id)
+	if id == "" {
+		jsonError(w, "Shop ID is required", http.StatusBadRequest)
+		return
+	}
+
+	var shop models.Shop
+	if err := json.NewDecoder(r.Body).Decode(&shop); err != nil {
+		jsonError(w, "Invalid JSON format", http.StatusBadRequest)
+		return
+	}
+
+	query := `
+		UPDATE shops SET
+			name = COALESCE(NULLIF($1, ''), name),
+			address = $2,
+			photo_url = $3,
+			whatsapp = $4,
+			timezone = COALESCE(NULLIF($5, ''), timezone),
+			theme_primary_color = COALESCE(NULLIF($6, ''), theme_primary_color),
+			theme_secondary_color = COALESCE(NULLIF($7, ''), theme_secondary_color),
+			theme_logo_url = $8,
+			terminology_shop_label = COALESCE(NULLIF($9, ''), terminology_shop_label),
+			terminology_product_label = COALESCE(NULLIF($10, ''), terminology_product_label),
+			updated_at = NOW()
+		WHERE id = $11
+		RETURNING id, name, address, photo_url, whatsapp, owner_id, timezone, business_type_id,
+		          theme_primary_color, theme_secondary_color, theme_logo_url,
+		          terminology_shop_label, terminology_product_label,
+		          modules, features, created_at, updated_at
+	`
+
+	var s models.Shop
+	var createdAt, updatedAt time.Time
+	var modulesJSON, featuresJSON []byte
+
+	err := h.DB.QueryRow(query,
+		shop.Name, shop.Address, shop.PhotoURL, shop.WhatsApp, shop.Timezone,
+		shop.ThemePrimaryColor, shop.ThemeSecondaryColor, shop.ThemeLogoURL,
+		shop.TerminologyShopLabel, shop.TerminologyProductLabel, id,
+	).Scan(
+		&s.ID, &s.Name, &s.Address, &s.PhotoURL, &s.WhatsApp,
+		&s.OwnerID, &s.Timezone, &s.BusinessTypeID,
+		&s.ThemePrimaryColor, &s.ThemeSecondaryColor, &s.ThemeLogoURL,
+		&s.TerminologyShopLabel, &s.TerminologyProductLabel,
+		&modulesJSON, &featuresJSON,
+		&createdAt, &updatedAt,
+	)
+	if err == sql.ErrNoRows {
+		jsonError(w, "Shop not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		log.Printf("Error updating shop: %v", err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	s.Modules = modulesJSON
+	s.Features = featuresJSON
+	s.CreatedAt = &createdAt
+	s.UpdatedAt = &updatedAt
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(s)
+}
+
+// GetShopMembers handles GET /api/shops/{id}/members
+func (h *ShopHandler) GetShopMembers(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Path: /api/shops/{id}/members
+	path := strings.TrimPrefix(r.URL.Path, "/api/shops/")
+	shopID := strings.TrimSuffix(path, "/members")
+
+	query := `
+		SELECT sm.shop_id, sm.user_id, sm.role_id, sm.role, sm.permissions, sm.added_at,
+		       u.first_name, u.last_name, u.email, u.phone, u.photo_url
+		FROM shop_members sm
+		JOIN users u ON u.id = sm.user_id
+		WHERE sm.shop_id = $1
+		ORDER BY sm.added_at ASC
+	`
+	rows, err := h.DB.Query(query, shopID)
+	if err != nil {
+		log.Printf("Error querying members: %v", err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	type MemberWithUser struct {
+		models.ShopMember
+		FirstName string `json:"first_name"`
+		LastName  string `json:"last_name"`
+		Email     string `json:"email"`
+		Phone     *string `json:"phone,omitempty"`
+		PhotoURL  *string `json:"photo_url,omitempty"`
+	}
+
+	members := []MemberWithUser{}
+	for rows.Next() {
+		var m MemberWithUser
+		var addedAt time.Time
+		var permJSON []byte
+		if err := rows.Scan(
+			&m.ShopID, &m.UserID, &m.RoleID, &m.Role, &permJSON, &addedAt,
+			&m.FirstName, &m.LastName, &m.Email, &m.Phone, &m.PhotoURL,
+		); err != nil {
+			continue
+		}
+		m.Permissions = permJSON
+		m.AddedAt = &addedAt
+		members = append(members, m)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(members)
+}
+
+// jsonError is a shared helper to write JSON error responses
+// jsonError es un helper compartido para escribir respuestas de error en JSON
+func jsonError(w http.ResponseWriter, msg string, status int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(map[string]string{"error": msg})
+}
