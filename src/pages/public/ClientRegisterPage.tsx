@@ -1,6 +1,7 @@
 import {useState, FC, FormEvent, ChangeEvent} from 'react';
 import {Link, useSearchParams} from 'react-router-dom';
-import {registerClient, ClientRegisterData} from '../../services/authServices';
+import {registerClient, loginUser, ClientRegisterData} from '../../services/authServices';
+import {useAuthStore} from '../../store/authStore';
 import '../../style/Register.css'; // Reutilizamos estilos
 import { useTenant } from '../../context/TenantContext';
 
@@ -19,6 +20,7 @@ const ClientRegisterPage: FC = () => {
     
     const [searchParams] = useSearchParams();
     const { tenant } = useTenant();
+    const { setAuthUser } = useAuthStore();
 
     const redirectUrl = searchParams.get('redirect') || '/client/dashboard';
 
@@ -47,7 +49,12 @@ const ClientRegisterPage: FC = () => {
             }
 
             await registerClient({...formData, shopId});
-            // Registro exitoso -> Autologin implícito -> Redirigir manejado por App.tsx
+            
+            // Registro exitoso -> Autologin implícito
+            const userData = await loginUser(formData.email, formData.password);
+            
+            // Actualizamos la sesión en el store para disparar la redirección
+            setAuthUser(userData);
         } catch (err: any) {
             setError(err.message || "Error al registrarse.");
             setLoading(false);
