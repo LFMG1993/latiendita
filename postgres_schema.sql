@@ -12,6 +12,19 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ==========================================
+-- 0. BUSINESS TYPES / TIPOS DE NEGOCIO
+-- ==========================================
+-- Classifies the shops by their business vertical (e.g. Minimarket, Bakery, Pharmacy, Ice Cream Shop)
+-- Clasifica las tiendas según su tipo de negocio (ej. Minimercado, Panadería, Droguería, Heladería)
+CREATE TABLE business_types (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Business type unique identifier / Identificador único del tipo de negocio
+    name VARCHAR(100) NOT NULL, -- Name of the business type / Nombre del tipo de negocio
+    description TEXT, -- Description of the business type / Descripción del tipo de negocio
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, -- Creation timestamp / Fecha de creación
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP -- Last update timestamp / Fecha de última actualización
+);
+
+-- ==========================================
 -- 1. USERS & PROFILES / USUARIOS Y PERFILES
 -- ==========================================
 -- Stores the users of the system (Owners, Employees, SuperAdmins, Clients).
@@ -65,6 +78,7 @@ CREATE TABLE shops (
     whatsapp VARCHAR(50), -- WhatsApp contact link or number / Número o enlace de contacto de WhatsApp
     owner_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE RESTRICT, -- User ID of the owner / ID del usuario dueño
     timezone VARCHAR(100) DEFAULT 'America/Bogota' NOT NULL, -- Timezone for sales and schedules / Zona horaria para ventas y horarios
+    business_type_id UUID REFERENCES business_types(id) ON DELETE SET NULL, -- Business type reference / Referencia al tipo de negocio
     
     -- Branding / Theme config / Configuración de Marca y Tema
     theme_primary_color VARCHAR(7) DEFAULT '#000000', -- Brand primary color (hex code) / Color primario de marca (código hex)
@@ -157,8 +171,25 @@ ADD CONSTRAINT fk_shop_members_role
 FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE SET NULL;
 
 -- ==========================================
--- 5. INVENTORY & RECIPES / INVENTARIO Y RECETAS
+-- 5. INVENTORY & CATALOG / INVENTARIO Y CATÁLOGO
 -- ==========================================
+
+-- 5A. MASTER PRODUCTS CATALOG / CATÁLOGO MAESTRO DE PRODUCTOS
+-- Global predefined products to avoid duplicate creations across shops.
+-- Productos globales predefinidos para evitar creaciones duplicadas entre tiendas.
+CREATE TABLE master_products (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Product master unique identifier / Identificador único del producto maestro
+    name VARCHAR(255) NOT NULL, -- Global product name / Nombre global del producto
+    brand VARCHAR(100), -- Product brand (e.g. Coca-Cola) / Marca del producto (ej. Coca-Cola)
+    barcode VARCHAR(100) UNIQUE, -- Product barcode (EAN/UPC) / Código de barras del producto (EAN/UPC)
+    description TEXT, -- Global product description / Descripción global del producto
+    image_url TEXT, -- Global product image URL / URL de la imagen global del producto
+    business_type_id UUID REFERENCES business_types(id) ON DELETE SET NULL, -- Target business type / Tipo de negocio al que pertenece
+    category VARCHAR(100) NOT NULL, -- Global product category / Categoría global del producto
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, -- Creation timestamp / Fecha de creación
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP -- Last update timestamp / Fecha de última actualización
+);
+
 -- Raw ingredients used in recipes.
 -- Ingredientes crudos utilizados en las recetas.
 CREATE TABLE ingredients (
@@ -179,13 +210,15 @@ CREATE TABLE ingredients (
 CREATE TABLE products (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Product unique identifier / Identificador único del producto
     shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE, -- Associated shop ID / ID de la tienda asociada
-    name VARCHAR(255) NOT NULL, -- Product name / Nombre del producto
+    master_product_id UUID REFERENCES master_products(id) ON DELETE SET NULL, -- Reference to the global master catalog / Referencia al catálogo maestro global
+    name VARCHAR(255) NOT NULL, -- Product name (locally defined or copied from master) / Nombre del producto (definido localmente o copiado de maestro)
     price NUMERIC(12, 2) NOT NULL, -- Public sale price / Precio de venta al público
     category VARCHAR(100) NOT NULL, -- Category of product / Categoría del producto
     cost NUMERIC(12, 2) DEFAULT 0.00, -- Raw production or wholesale cost / Costo de producción o costo mayorista
     stock NUMERIC(12, 3) DEFAULT 0.000, -- Inventory for non-recipe items / Inventario para artículos sin receta
-    image_url TEXT, -- Product image URL / URL de la imagen del producto
-    description TEXT, -- Detailed product description / Descripción detallada del producto
+    image_url TEXT, -- Product image URL (local override or master copy) / URL de la imagen del producto (sobreescritura local o copia de maestro)
+    description TEXT, -- Detailed product description (local override) / Descripción detallada del producto (sobreescritura local)
+    is_available BOOLEAN DEFAULT TRUE, -- If product is active and for sale in this shop / Si el producto está activo y a la venta en esta tienda
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, -- Creation timestamp / Fecha de creación
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP -- Last update timestamp / Fecha de última actualización
 );
@@ -440,3 +473,5 @@ CREATE INDEX idx_debt_payment_requests_client ON debt_payment_requests(client_id
 CREATE INDEX idx_cash_sessions_shop_status ON cash_sessions(shop_id, status);
 CREATE INDEX idx_expenses_shop_date ON expenses(shop_id, created_at DESC);
 CREATE INDEX idx_client_shop_accounts_client ON client_shop_accounts(client_id);
+CREATE INDEX idx_products_master ON products(master_product_id);
+CREATE INDEX idx_master_products_barcode ON master_products(barcode);
