@@ -51,7 +51,7 @@ const ProductTable: FC<ProductTableProps> = ({products, onEdit, onDelete}) => {
             cell: info => (
                 <>
                     {formatCurrency(info.getValue())}
-                    {info.row.original.recipe.some(item => item.ingredientId.startsWith('CATEGORY::')) && (
+                    {(info.row.original.recipe ?? []).some(item => item.ingredientId.startsWith('CATEGORY::')) && (
                         <span className="ms-1 text-primary"
                               title="Costo estimado basado en el ingrediente más caro de la categoría.">*</span>
                     )}

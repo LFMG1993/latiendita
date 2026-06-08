@@ -87,7 +87,11 @@ const ClientDashboardPage: FC = () => {
                 // Si no hay en URL ni local, buscamos en el último pedido
                 const lastOrderShopId = ordersData.length > 0 ? ordersData[0].shopId : null;
                 
-                const shopId = urlShopId || localShopId || lastOrderShopId || user.iceCreamShopIds?.[0];
+                let shopId = urlShopId || localShopId || lastOrderShopId || user.iceCreamShopIds?.[0];
+                if (shopId === 'mock-shop-id-123') {
+                    shopId = null;
+                    localStorage.removeItem('last_shop_id');
+                }
                 setCurrentShopId(shopId || null);
 
                 if (shopId) {
@@ -376,19 +380,28 @@ const ClientDashboardPage: FC = () => {
                             {theme === 'light' ? <MoonFill size={14}/> : <SunFill size={14}/>}
                         </button>
 
-                        {/* Selector de tiendas */}
-                        {/* Selector de tiendas siempre visible */}
-                        <select
-                            className="form-select form-select-sm"
-                            style={{backgroundColor:'rgba(255,255,255,0.15)', border:'1px solid rgba(255,255,255,0.3)', borderRadius:20, padding:'2px 6px', maxWidth:'200px'}}
-                            value={currentShopId || ''}
-                            onChange={e => handleSelectShop(e.target.value)}
+                        {/* Selector de tiendas - botón que abre modal */}
+                        <button
+                            className="btn btn-sm d-flex align-items-center gap-2 text-white fw-semibold"
+                            style={{
+                                background: 'rgba(255,255,255,0.18)',
+                                border: '1.5px solid rgba(255,255,255,0.4)',
+                                borderRadius: 20,
+                                padding: '5px 14px',
+                                maxWidth: 200,
+                                overflow: 'hidden',
+                                whiteSpace: 'nowrap',
+                            }}
+                            onClick={() => setShowShopSelectorModal(true)}
+                            title="Cambiar tienda"
                         >
-                            <option value="" disabled>Seleccionar tienda</option>
-                            {availableShops.map(shop => (
-                                <option key={shop.id} value={shop.id}>{shop.name}</option>
-                            ))}
-                        </select>
+                            <GeoAltFill size={14} className="flex-shrink-0" />
+                            <span className="text-truncate small">
+                                {currentShopId
+                                    ? (availableShops.find(s => s.id === currentShopId)?.name || 'Tienda')
+                                    : 'Seleccionar tienda'}
+                            </span>
+                        </button>
 
                         {/* Botón de Perfil */}
                         <button
@@ -412,9 +425,25 @@ const ClientDashboardPage: FC = () => {
             <div className="container py-4 pb-5 mb-4 mb-md-0 pb-md-4">
                 {/* Header Bienvenida */}
                 <div className="row mb-4">
-                    <div className="col-12">
-                        <h2 className="fw-bold mb-0">Hola, {user?.firstName}</h2>
-                        <p className="text-secondary">Este es tu resumen de cuenta y pedidos.</p>
+                    <div className="col-12 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <div>
+                            <h2 className="fw-bold mb-0">Hola, {user?.firstName} 👋</h2>
+                            <p className="text-secondary mb-0 mt-1 small">Este es tu resumen de cuenta y pedidos.</p>
+                        </div>
+                        {/* Indicador de tienda activa */}
+                        <button
+                            className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2 rounded-pill px-3"
+                            onClick={() => setShowShopSelectorModal(true)}
+                            title="Cambiar tienda"
+                        >
+                            <GeoAltFill size={14} />
+                            <span className="small fw-semibold">
+                                {currentShopId
+                                    ? (availableShops.find(s => s.id === currentShopId)?.name || 'Tienda activa')
+                                    : 'Seleccionar tienda'}
+                            </span>
+                            <span className="badge bg-primary rounded-pill" style={{fontSize:'0.65rem'}}>Cambiar</span>
+                        </button>
                     </div>
                 </div>
 

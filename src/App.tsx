@@ -30,6 +30,8 @@ import TeamManagementPage from "./pages/admin/TeamManagementPage.tsx";
 import {AdminProductsPage} from "./pages/admin/AdminProductsPage.tsx";
 import {SuperAdminDashboard} from "./pages/admin/SuperAdminDashboard.tsx";
 import {SaasClientsPage} from "./pages/admin/SaasClientsPage.tsx";
+import MasterCatalogPage from "./pages/admin/MasterCatalogPage.tsx";
+import ProductRequestsPage from "./pages/admin/ProductRequestsPage.tsx";
 import {PublicShopPage} from "./pages/public/PublicShopPage.tsx";
 import EmployeeClaim from "./pages/EmployeeClaim";
 import SuppliersPage from "./pages/admin/SuppliersPage.tsx";
@@ -118,6 +120,12 @@ const App: FC = () => {
     // Se activa cuando el usuario se carga en el store.
     useEffect(() => {
         if (user && !initialRedirectDone) {
+            const currentPath = window.location.pathname;
+            if (currentPath.startsWith('/catalogo') || currentPath.startsWith('/employee-claim')) {
+                setInitialRedirectDone(true);
+                return;
+            }
+
             // Verificar si el owner tiene solo tiendas en estado 'pending'
             if (user.role === 'owner') {
                 const iceCreamShops = useAuthStore.getState().iceCreamShops;
@@ -171,6 +179,12 @@ const App: FC = () => {
                 <Route path="/super-admin/clients"
                        element={<ProtectedRoute
                            requiredPermission="super_admin_access"><MainLayout><SaasClientsPage/></MainLayout></ProtectedRoute>}/>
+                <Route path="/super-admin/catalog"
+                       element={<ProtectedRoute
+                           requiredPermission="super_admin_access"><MainLayout><MasterCatalogPage/></MainLayout></ProtectedRoute>}/>
+                <Route path="/super-admin/product-requests"
+                       element={<ProtectedRoute
+                           requiredPermission="super_admin_access"><MainLayout><ProductRequestsPage/></MainLayout></ProtectedRoute>}/>
                 <Route path="/orders"
                        element={<ProtectedRoute
                            requiredPermission="pos_access"><MainLayout><AdminOrdersPage/></MainLayout></ProtectedRoute>}/>

@@ -6,9 +6,10 @@ import { useCart } from '../../context/CartContext';
 
 interface PublicProductCardProps {
     product: PublicProduct;
+    readOnly?: boolean;
 }
 
-const PublicProductCard: FC<PublicProductCardProps> = ({product}) => {
+const PublicProductCard: FC<PublicProductCardProps> = ({product, readOnly = false}) => {
     const { tenant } = useTenant();
     const { addToCart, items, decreaseQuantity } = useCart();
     
@@ -58,38 +59,46 @@ const PublicProductCard: FC<PublicProductCardProps> = ({product}) => {
                     </p>
                 )}
                 
-                <div className="mt-auto d-flex justify-content-between align-items-center pt-3 border-top">
-                    <span className="h5 mb-0 fw-bold" style={{color: tenant.theme.primaryColor}}>
-                        {formatCurrency(product.price)}
-                    </span>
-                    
-                    {quantity === 0 ? (
-                        <button 
-                            className="btn btn-sm btn-outline-primary rounded-pill d-flex align-items-center gap-2" 
-                            title="Añadir al carrito"
-                            onClick={() => addToCart(product)}
-                        >
-                            <span>Añadir</span>
-                            <CartPlus size={20} />
-                        </button>
-                    ) : (
-                        <div className="d-flex align-items-center bg-body-tertiary rounded-pill border">
+                {!readOnly ? (
+                    <div className="mt-auto d-flex justify-content-between align-items-center pt-3 border-top">
+                        <span className="h5 mb-0 fw-bold" style={{color: tenant.theme.primaryColor}}>
+                            {formatCurrency(product.price)}
+                        </span>
+                        
+                        {quantity === 0 ? (
                             <button 
-                                className="btn btn-sm btn-link text-secondary p-0 px-2"
-                                onClick={() => decreaseQuantity(product.id)}
-                            >
-                                <Dash size={18}/>
-                            </button>
-                            <span className="fw-bold px-1 text-body small">{quantity}</span>
-                             <button 
-                                className="btn btn-sm btn-link text-primary p-0 px-2"
+                                className="btn btn-sm btn-outline-primary rounded-pill d-flex align-items-center gap-2" 
+                                title="Añadir al carrito"
                                 onClick={() => addToCart(product)}
                             >
-                                <Plus size={18}/>
+                                <span>Añadir</span>
+                                <CartPlus size={20} />
                             </button>
-                        </div>
-                    )}
-                </div>
+                        ) : (
+                            <div className="d-flex align-items-center bg-body-tertiary rounded-pill border">
+                                <button 
+                                    className="btn btn-sm btn-link text-secondary p-0 px-2"
+                                    onClick={() => decreaseQuantity(product.id)}
+                                >
+                                    <Dash size={18}/>
+                                </button>
+                                <span className="fw-bold px-1 text-body small">{quantity}</span>
+                                 <button 
+                                    className="btn btn-sm btn-link text-primary p-0 px-2"
+                                    onClick={() => addToCart(product)}
+                                >
+                                    <Plus size={18}/>
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div className="mt-auto pt-3 border-top text-center">
+                        <span className="badge bg-secondary bg-opacity-10 text-secondary px-3 py-2 rounded-pill fw-semibold small">
+                            📦 Producto del Catálogo Maestro
+                        </span>
+                    </div>
+                )}
             </div>
         </div>
     );

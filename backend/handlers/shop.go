@@ -161,22 +161,42 @@ func (h *ShopHandler) GetShopsByOwner(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	isPublic := r.URL.Query().Get("public") == "true"
 	ownerID := r.URL.Query().Get("owner_id")
-	if ownerID == "" {
+
+	if ownerID == "" && !isPublic {
 		jsonError(w, "owner_id query parameter is required", http.StatusBadRequest)
 		return
 	}
 
-	query := `
-		SELECT id, name, address, photo_url, whatsapp, owner_id, timezone, business_type_id,
-		       theme_primary_color, theme_secondary_color, theme_logo_url,
-		       terminology_shop_label, terminology_product_label,
-		       modules, features, status, created_at, updated_at
-		FROM shops
-		WHERE owner_id = $1
-		ORDER BY created_at ASC
-	`
-	rows, err := h.DB.Query(query, ownerID)
+	var query string
+	var rows *sql.Rows
+	var err error
+
+	if isPublic {
+		query = `
+			SELECT id, name, address, photo_url, whatsapp, owner_id, timezone, business_type_id,
+			       theme_primary_color, theme_secondary_color, theme_logo_url,
+			       terminology_shop_label, terminology_product_label,
+			       modules, features, status, created_at, updated_at
+			FROM shops
+			WHERE status = 'active'
+			ORDER BY name ASC
+		`
+		rows, err = h.DB.Query(query)
+	} else {
+		query = `
+			SELECT id, name, address, photo_url, whatsapp, owner_id, timezone, business_type_id,
+			       theme_primary_color, theme_secondary_color, theme_logo_url,
+			       terminology_shop_label, terminology_product_label,
+			       modules, features, status, created_at, updated_at
+			FROM shops
+			WHERE owner_id = $1
+			ORDER BY created_at ASC
+		`
+		rows, err = h.DB.Query(query, ownerID)
+	}
+
 	if err != nil {
 		log.Printf("Error querying shops: %v", err)
 		jsonError(w, "Internal server error", http.StatusInternalServerError)

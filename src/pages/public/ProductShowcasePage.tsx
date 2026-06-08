@@ -14,6 +14,7 @@ import {useTheme} from '../../context/ThemeContext';
 import {createOrder} from '../../services/orderService';
 import {getClientFinancials} from '../../services/clientService';
 import {NewOrderData} from '../../types/order.types';
+import {getAllMasterProducts} from '../../services/masterProductService';
 
 // ID de la heladería principal. 
 // NOTA: En un sistema multi-tenant real por dominio, esto vendría del subdominio.
@@ -50,17 +51,43 @@ const ProductShowcaseContent: FC<{targetShopId: string | null, DEFAULT_SHOP_ID: 
     const {isAuthenticated, user} = useAuthStore();
     const navigate = useNavigate(); // Necesitamos usar useNavigate del router
     
+    const [searchParams] = useSearchParams();
+    const mode = searchParams.get('mode');
+    const isMasterMode = mode === 'master';
+
     useEffect(() => {
-        if (targetShopId && targetShopId !== DEFAULT_SHOP_ID) {
+        if (!isMasterMode && targetShopId && targetShopId !== DEFAULT_SHOP_ID) {
             initializeCart(targetShopId);
             // PERSISTENCIA: Guardamos el shopId para que el dashboard sepa qué tienda mostrar
             localStorage.setItem('last_shop_id', targetShopId);
         }
-    }, [targetShopId, initializeCart]);
+    }, [targetShopId, initializeCart, isMasterMode]);
 
 
     useEffect(() => {
         const fetchData = async () => {
+            if (isMasterMode) {
+                try {
+                    const data = await getAllMasterProducts();
+                    const mapped: PublicProduct[] = data.map(mp => ({
+                        id: mp.id,
+                        name: mp.name,
+                        description: mp.description || (mp.brand ? `Marca: ${mp.brand}` : ''),
+                        price: 0,
+                        category: mp.category,
+                        imageURL: mp.image_url
+                    }));
+                    setProducts(mapped);
+                    setError(null);
+                } catch (err: any) {
+                    console.error("Error fetching master products", err);
+                    setError(err.message || "Error al cargar el catálogo maestro");
+                } finally {
+                    setLoading(false);
+                }
+                return;
+            }
+
             if (!targetShopId || targetShopId === DEFAULT_SHOP_ID) {
                 setLoading(false);
                 return;
@@ -79,7 +106,7 @@ const ProductShowcaseContent: FC<{targetShopId: string | null, DEFAULT_SHOP_ID: 
         };
 
         fetchData();
-    }, [targetShopId]);
+    }, [targetShopId, isMasterMode]);
 
     // Checkout Logic
     const {items: cart, totalAmount, totalItems, clearCart} = useCart();
@@ -178,7 +205,7 @@ const ProductShowcaseContent: FC<{targetShopId: string | null, DEFAULT_SHOP_ID: 
         );
     }
 
-    if (!targetShopId || targetShopId === DEFAULT_SHOP_ID) {
+    if (!isMasterMode && (!targetShopId || targetShopId === DEFAULT_SHOP_ID)) {
         return (
             <div className="container py-5 text-center">
                  <h2 className="fw-bold mb-3 text-body">¡Bienvenido a nuestro Menú Digital!</h2>
@@ -191,14 +218,20 @@ const ProductShowcaseContent: FC<{targetShopId: string | null, DEFAULT_SHOP_ID: 
     return (
         <div className="min-vh-100 bg-body-tertiary">
              {/* Header Hero */}
-             <div className="text-white py-5 shadow-sm" style={{backgroundColor: tenant.theme.primaryColor}}>
+              <div className="text-white py-5 shadow-sm" style={{backgroundColor: tenant.theme.primaryColor}}>
                 <div className="container">
                     <div className="row align-items-center">
                         <div className="col-lg-8">
-                             <h1 className="fw-bold display-5 mb-2">Nuestro Menú</h1>
-                             <p className="lead opacity-75 mb-0">Explora nuestros deliciosos productos, frescos y hechos con amor.</p>
+                             <h1 className="fw-bold display-5 mb-2">
+                                 {isMasterMode ? 'Catálogo Maestro Completo' : 'Nuestro Menú'}
+                             </h1>
+                             <p className="lead opacity-75 mb-0">
+                                 {isMasterMode 
+                                     ? 'Vista global de todos los productos autorizados en el sistema.' 
+                                     : 'Explora nuestros deliciosos productos, frescos y hechos con amor.'}
+                             </p>
                         </div>
-                             <div className="d-flex justify-content-lg-end align-items-center gap-2">
+                             <div className="col-lg-4 d-flex justify-content-lg-end align-items-center gap-2 mt-3 mt-lg-0">
                                 <button 
                                     onClick={toggleTheme}
                                     className="btn btn-light rounded-circle shadow-sm p-2 d-flex align-items-center justify-content-center"
@@ -210,7 +243,7 @@ const ProductShowcaseContent: FC<{targetShopId: string | null, DEFAULT_SHOP_ID: 
                                  <div className="badge bg-white text-primary p-3 rounded-pill shadow-sm">
                                     <span className="fw-bold d-flex align-items-center normal-text-color">
                                         <GeoAltFill className="me-2"/>
-                                        {tenant.terminology.shopLabel}
+                                        {isMasterMode ? 'SaaS Global' : tenant.terminology.shopLabel}
                                     </span>
                                  </div>
                              </div>
@@ -256,7 +289,7 @@ const ProductShowcaseContent: FC<{targetShopId: string | null, DEFAULT_SHOP_ID: 
                     <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4 pb-5">
                         {filteredProducts.map(product => (
                             <div className="col" key={product.id}>
-                                <PublicProductCard product={product} />
+                                <PublicProductCard product={product} readOnly={isMasterMode} />
                             </div>
                         ))}
                     </div>
@@ -275,15 +308,19 @@ const ProductShowcaseContent: FC<{targetShopId: string | null, DEFAULT_SHOP_ID: 
              </footer>
 
              {/* Componentes del Carrito */}
-             <FloatingCart onClick={() => setIsCartOpen(true)} />
-             <CartSummaryModal 
-                isOpen={isCartOpen} 
-                onClose={() => setIsCartOpen(false)} 
-                onCheckout={handleCheckout} 
-                paymentMethod={paymentMethod}
-                onChangePaymentMethod={setPaymentMethod}
-                isCreditEnabled={isCreditEnabled}
-             />
+             {!isMasterMode && (
+                 <>
+                     <FloatingCart onClick={() => setIsCartOpen(true)} />
+                     <CartSummaryModal 
+                        isOpen={isCartOpen} 
+                        onClose={() => setIsCartOpen(false)} 
+                        onCheckout={handleCheckout} 
+                        paymentMethod={paymentMethod}
+                        onChangePaymentMethod={setPaymentMethod}
+                        isCreditEnabled={isCreditEnabled}
+                     />
+                 </>
+             )}
         </div>
     );
 };
