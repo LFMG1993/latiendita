@@ -239,6 +239,24 @@ func main() {
 		}
 	})
 
+	// Public Master Product Shops endpoint: GET /api/public/master-products/{id}/shops
+	mux.HandleFunc("/api/public/master-products/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/shops") && r.Method == http.MethodGet {
+			masterProductHandler.GetMasterProductShops(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	// Public Shop Enroll endpoint: POST /api/public/shops/{shop_id}/enroll
+	mux.HandleFunc("/api/public/shops/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/enroll") && r.Method == http.MethodPost {
+			masterProductHandler.EnrollClientToShop(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
 	// Master Catalog routes (Super Admin)
 	// GET/POST /api/admin/master-products
 	mux.HandleFunc("/api/admin/master-products", func(w http.ResponseWriter, r *http.Request) {

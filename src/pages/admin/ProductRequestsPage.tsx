@@ -64,7 +64,11 @@ const ProductRequestsPage: FC = () => {
             setApproveModal(null);
             fetchRequests();
         } catch (e: any) {
-            showToast(e?.message || 'Error al aprobar', 'danger');
+            let errorMsg = e?.message || 'Error al aprobar';
+            if (errorMsg.includes('already exists') || errorMsg.includes('duplicate')) {
+                errorMsg = '❌ Conflicto: Ya existe un producto con este código de barras en el catálogo maestro. Modifica el código de barras o déjalo vacío para continuar.';
+            }
+            showToast(errorMsg, 'danger');
         } finally {
             setProcessing(false);
         }

@@ -500,3 +500,113 @@ func coalesceStr(a, b *string) *string {
 	}
 	return b
 }
+
+// GetMasterProductShops handles GET /api/public/master-products/{id}/shops?client_id=...
+func (h *MasterProductHandler) GetMasterProductShops(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(parts) < 4 {
+		jsonError(w, "Invalid path", http.StatusBadRequest)
+		return
+	}
+	masterProductID := parts[3]
+	clientID := r.URL.Query().Get("client_id")
+
+	query := `
+		SELECT 
+			s.id AS shop_id,
+			s.name AS shop_name,
+			p.price AS price,
+			p.stock AS stock,
+			EXISTS(
+				SELECT 1 FROM cash_sessions cs 
+				WHERE cs.shop_id = s.id AND cs.status = 'open'
+			) AS is_open,
+			EXISTS(
+				SELECT 1 FROM client_shop_accounts csa 
+				WHERE csa.shop_id = s.id AND csa.client_id = $1
+			) AS is_enrolled
+		FROM products p
+		JOIN shops s ON s.id = p.shop_id
+		WHERE p.master_product_id = $2
+		ORDER BY s.name
+	`
+	rows, err := h.DB.Query(query, clientID, masterProductID)
+	if err != nil {
+		log.Printf("Error querying master product shops: %v", err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	type ShopProductStatus struct {
+		ShopID     string  `json:"shop_id"`
+		ShopName   string  `json:"shop_name"`
+		Price      float64 `json:"price"`
+		Stock      float64 `json:"stock"`
+		IsOpen     bool    `json:"is_open"`
+		IsEnrolled bool    `json:"is_enrolled"`
+	}
+
+	results := []ShopProductStatus{}
+	for rows.Next() {
+		var s ShopProductStatus
+		if err := rows.Scan(&s.ShopID, &s.ShopName, &s.Price, &s.Stock, &s.IsOpen, &s.IsEnrolled); err != nil {
+			log.Printf("Error scanning shop product status: %v", err)
+			continue
+		}
+		results = append(results, s)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(results)
+}
+
+// EnrollClientToShop handles POST /api/public/shops/{shop_id}/enroll
+func (h *MasterProductHandler) EnrollClientToShop(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(parts) < 4 {
+		jsonError(w, "Invalid path", http.StatusBadRequest)
+		return
+	}
+	shopID := parts[3]
+
+	var body struct {
+		ClientID string `json:"client_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		jsonError(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+	body.ClientID = strings.TrimSpace(body.ClientID)
+	if body.ClientID == "" {
+		jsonError(w, "client_id is required", http.StatusBadRequest)
+		return
+	}
+
+	// First verify if the client exists in users table with role 'client'
+	var exists bool
+	err := h.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE id = $1 AND role = 'client')", body.ClientID).Scan(&exists)
+	if err != nil || !exists {
+		jsonError(w, "Client not found or invalid role", http.StatusNotFound)
+		return
+	}
+
+	// Insert association into client_shop_accounts
+	query := `
+		INSERT INTO client_shop_accounts (shop_id, client_id, credits, debt, is_credit_enabled, credit_limit)
+		VALUES ($1, $2, 0.00, 0.00, false, 0.00)
+		ON CONFLICT (shop_id, client_id) DO NOTHING
+	`
+	_, err = h.DB.Exec(query, shopID, body.ClientID)
+	if err != nil {
+		log.Printf("Error enrolling client to shop: %v", err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Client enrolled successfully to shop",
+	})
+}

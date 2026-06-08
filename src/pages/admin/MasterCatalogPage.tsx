@@ -140,7 +140,7 @@ const MasterCatalogPage: FC = () => {
             </div>
 
             {/* Table */}
-            <div className="card border-0 shadow-sm">
+            <div className="card shadow-sm border border-secondary-subtle">
                 <div className="card-body p-0">
                     {loading ? (
                         <div className="text-center py-5">
@@ -155,25 +155,25 @@ const MasterCatalogPage: FC = () => {
                     ) : (
                         <div className="table-responsive">
                             <table className="table table-hover align-middle mb-0">
-                                <thead className="table-light">
+                                <thead className="text-secondary small text-uppercase border-bottom">
                                     <tr>
-                                        <th className="ps-4">Producto</th>
-                                        <th>Marca</th>
-                                        <th>Categoría</th>
-                                        <th><Upc size={14} className="me-1" />Código de Barras</th>
-                                        <th className="text-end pe-4">Acciones</th>
+                                        <th className="ps-4 py-3">Producto</th>
+                                        <th className="py-3">Marca</th>
+                                        <th className="py-3">Categoría</th>
+                                        <th className="py-3"><Upc size={14} className="me-1" />Código de Barras</th>
+                                        <th className="text-end pe-4 py-3">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {products.map(p => (
                                         <tr key={p.id}>
-                                            <td className="ps-4">
+                                            <td className="ps-4 py-3">
                                                 <div className="d-flex align-items-center gap-3">
                                                     {p.image_url ? (
                                                         <img src={p.image_url} alt={p.name} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 8 }} />
                                                     ) : (
-                                                        <div className="bg-light rounded d-flex align-items-center justify-content-center" style={{ width: 40, height: 40 }}>
-                                                            <Tag size={18} className="text-muted" />
+                                                        <div className="rounded d-flex align-items-center justify-content-center" style={{ width: 40, height: 40, backgroundColor: 'rgba(120, 120, 120, 0.15)' }}>
+                                                            <Tag size={18} className="text-secondary" />
                                                         </div>
                                                     )}
                                                     <div>
@@ -182,14 +182,18 @@ const MasterCatalogPage: FC = () => {
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="text-secondary">{p.brand || '—'}</td>
-                                            <td><span className="badge bg-primary bg-opacity-10 text-primary">{p.category}</span></td>
-                                            <td className="font-monospace small">{p.barcode || '—'}</td>
-                                            <td className="text-end pe-4">
-                                                <button className="btn btn-sm btn-outline-secondary me-2" onClick={() => openEdit(p)} title="Editar">
+                                            <td className="text-secondary py-3">{p.brand || '—'}</td>
+                                            <td className="py-3">
+                                                <span className="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1.5 rounded-pill">
+                                                    {p.category}
+                                                </span>
+                                            </td>
+                                            <td className="font-monospace small py-3">{p.barcode || '—'}</td>
+                                            <td className="text-end pe-4 py-3">
+                                                <button className="btn btn-sm btn-outline-secondary me-2 rounded-pill px-2" onClick={() => openEdit(p)} title="Editar">
                                                     <PencilSquare size={14} />
                                                 </button>
-                                                <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(p)} title="Eliminar">
+                                                <button className="btn btn-sm btn-outline-danger rounded-pill px-2" onClick={() => handleDelete(p)} title="Eliminar">
                                                     <Trash size={14} />
                                                 </button>
                                             </td>

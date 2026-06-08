@@ -85,3 +85,28 @@ export const rejectProductRequest = async (id: string, adminNotes?: string): Pro
         body: JSON.stringify({ admin_notes: adminNotes }),
     });
 };
+
+// ---- PUBLIC CATALOG INTERACTION ----
+
+export interface ShopProductStatus {
+    shop_id: string;
+    shop_name: string;
+    price: number;
+    stock: number;
+    is_open: boolean;
+    is_enrolled: boolean;
+}
+
+/** Get all shops selling a specific master product and the client enrollment status */
+export const getMasterProductShops = async (masterProductId: string, clientId?: string): Promise<ShopProductStatus[]> => {
+    const qs = clientId ? `?client_id=${clientId}` : '';
+    return await apiClient<ShopProductStatus[]>(`/public/master-products/${masterProductId}/shops${qs}`);
+};
+
+/** Enroll a client in a specific shop */
+export const enrollClientToShop = async (shopId: string, clientId: string): Promise<{ success: boolean; message: string }> => {
+    return await apiClient<{ success: boolean; message: string }>(`/public/shops/${shopId}/enroll`, {
+        method: 'POST',
+        body: JSON.stringify({ client_id: clientId }),
+    });
+};

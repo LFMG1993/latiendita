@@ -9,12 +9,13 @@ import CartSummaryModal from '../../components/public/CartSummaryModal';
 import {CartProvider, useCart} from '../../context/CartContext';
 import {useAuthStore} from '../../store/authStore';
 import {useTenant} from '../../context/TenantContext'; // Importante: TenantContext puede no tener datos correctos si no hay ID aún.
-import {Search, Grid, GeoAltFill, MoonFill, SunFill} from 'react-bootstrap-icons';
+import {Search, Grid, GeoAltFill, MoonFill, SunFill, Tag} from 'react-bootstrap-icons';
 import {useTheme} from '../../context/ThemeContext';
 import {createOrder} from '../../services/orderService';
 import {getClientFinancials} from '../../services/clientService';
 import {NewOrderData} from '../../types/order.types';
-import {getAllMasterProducts} from '../../services/masterProductService';
+import {getAllMasterProducts, getMasterProductShops, enrollClientToShop, ShopProductStatus} from '../../services/masterProductService';
+import {useToast} from '../../context/ToastContext';
 
 // ID de la heladería principal. 
 // NOTA: En un sistema multi-tenant real por dominio, esto vendría del subdominio.
@@ -49,7 +50,53 @@ const ProductShowcaseContent: FC<{targetShopId: string | null, DEFAULT_SHOP_ID: 
     
     // Auth
     const {isAuthenticated, user} = useAuthStore();
+    const {showToast} = useToast();
     const navigate = useNavigate(); // Necesitamos usar useNavigate del router
+
+    // Master Product details / Shop availability modal
+    const [selectedMasterProduct, setSelectedMasterProduct] = useState<PublicProduct | null>(null);
+    const [shopsForProduct, setShopsForProduct] = useState<ShopProductStatus[]>([]);
+    const [loadingShops, setLoadingShops] = useState(false);
+    const [enrollingShopId, setEnrollingShopId] = useState<string | null>(null);
+
+    const handleProductClick = async (product: PublicProduct) => {
+        if (!isMasterMode) return; // Only open modal in master catalog view
+        setSelectedMasterProduct(product);
+        setLoadingShops(true);
+        try {
+            const clientUid = user?.uid || user?.id;
+            const data = await getMasterProductShops(product.id, clientUid);
+            setShopsForProduct(data);
+        } catch (err: any) {
+            console.error("Error fetching shops for product", err);
+            showToast("Error al cargar tiendas que ofrecen este producto", "danger");
+        } finally {
+            setLoadingShops(false);
+        }
+    };
+
+    const handleEnroll = async (shopId: string) => {
+        const clientUid = user?.uid || user?.id;
+        if (!isAuthenticated || !clientUid) {
+            showToast("Debes iniciar sesión para inscribirte a una tienda", "warning");
+            return;
+        }
+        setEnrollingShopId(shopId);
+        try {
+            await enrollClientToShop(shopId, clientUid);
+            showToast("🎉 ¡Te has inscrito a la tienda con éxito!", "success");
+            // Refresh shops list
+            if (selectedMasterProduct) {
+                const data = await getMasterProductShops(selectedMasterProduct.id, clientUid);
+                setShopsForProduct(data);
+            }
+        } catch (err: any) {
+            console.error("Error enrolling in shop", err);
+            showToast(err.message || "Error al inscribirte en la tienda", "danger");
+        } finally {
+            setEnrollingShopId(null);
+        }
+    };
     
     const [searchParams] = useSearchParams();
     const mode = searchParams.get('mode');
@@ -210,7 +257,7 @@ const ProductShowcaseContent: FC<{targetShopId: string | null, DEFAULT_SHOP_ID: 
             <div className="container py-5 text-center">
                  <h2 className="fw-bold mb-3 text-body">¡Bienvenido a nuestro Menú Digital!</h2>
                  <p className="text-secondary">Para ver los productos, necesitas escanear el código QR de la tienda o usar un enlace válido.</p>
-                 <Link to="/" className="btn btn-primary mt-3">Volver al Inicio</Link>
+                  <Link to="/" className="btn btn-primary mt-3" style={{backgroundColor: tenant.theme.primaryColor, borderColor: tenant.theme.primaryColor, backgroundImage: 'none'}}>Volver al Inicio</Link>
             </div>
         );
     }
@@ -275,7 +322,11 @@ const ProductShowcaseContent: FC<{targetShopId: string | null, DEFAULT_SHOP_ID: 
                                     key={cat}
                                     onClick={() => setSelectedCategory(cat)}
                                     className={`btn rounded-pill px-4 fw-medium ${selectedCategory === cat ? 'btn-primary' : 'btn-outline-secondary border-0 bg-body'}`}
-                                    style={selectedCategory === cat ? {backgroundColor: tenant.theme.primaryColor, borderColor: tenant.theme.primaryColor} : {}}
+                                    style={selectedCategory === cat ? {
+                                        backgroundColor: tenant.theme.primaryColor, 
+                                        borderColor: tenant.theme.primaryColor,
+                                        backgroundImage: 'none'
+                                    } : {}}
                                 >
                                     {cat}
                                 </button>
@@ -289,7 +340,11 @@ const ProductShowcaseContent: FC<{targetShopId: string | null, DEFAULT_SHOP_ID: 
                     <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4 pb-5">
                         {filteredProducts.map(product => (
                             <div className="col" key={product.id}>
-                                <PublicProductCard product={product} readOnly={isMasterMode} />
+                                <PublicProductCard 
+                                    product={product} 
+                                    readOnly={isMasterMode} 
+                                    onClick={() => handleProductClick(product)}
+                                />
                             </div>
                         ))}
                     </div>
@@ -320,6 +375,121 @@ const ProductShowcaseContent: FC<{targetShopId: string | null, DEFAULT_SHOP_ID: 
                         isCreditEnabled={isCreditEnabled}
                      />
                  </>
+             )}
+
+             {/* Modal de tiendas del producto maestro */}
+             {selectedMasterProduct && (
+                 <div className="modal show d-block text-start" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
+                     <div className="modal-dialog modal-dialog-centered modal-md">
+                         <div className="modal-content border-0 shadow-lg bg-body">
+                             <div className="modal-header border-0 pb-0">
+                                 <h5 className="modal-title fw-bold text-body">
+                                     🔍 Disponibilidad del Producto
+                                 </h5>
+                                 <button type="button" className="btn-close" onClick={() => setSelectedMasterProduct(null)} aria-label="Close"></button>
+                             </div>
+                             <div className="modal-body">
+                                 {/* Product Header inside modal */}
+                                 <div className="d-flex align-items-center gap-3 mb-4 p-3 bg-body-secondary rounded-3">
+                                     {selectedMasterProduct.imageURL ? (
+                                         <img src={selectedMasterProduct.imageURL} alt={selectedMasterProduct.name} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8 }} />
+                                     ) : (
+                                         <div className="bg-body d-flex align-items-center justify-content-center" style={{ width: 64, height: 64, borderRadius: 8 }}>
+                                             <Tag size={24} className="text-secondary opacity-50" />
+                                         </div>
+                                     )}
+                                     <div>
+                                         <h6 className="fw-bold mb-1 text-body">{selectedMasterProduct.name}</h6>
+                                         <span className="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-2.5 py-1 small">
+                                             {selectedMasterProduct.category}
+                                         </span>
+                                         {selectedMasterProduct.description && <div className="small text-secondary mt-1 text-truncate" style={{maxWidth: '220px'}}>{selectedMasterProduct.description}</div>}
+                                     </div>
+                                 </div>
+
+                                 <h6 className="fw-bold mb-3 text-body px-1">Tiendas que lo ofrecen:</h6>
+                                 {loadingShops ? (
+                                     <div className="text-center py-4">
+                                         <div className="spinner-border text-primary spinner-border-sm" role="status">
+                                             <span className="visually-hidden">Cargando tiendas...</span>
+                                         </div>
+                                         <p className="text-secondary small mt-2">Buscando tiendas...</p>
+                                     </div>
+                                 ) : shopsForProduct.length === 0 ? (
+                                     <div className="text-center py-4 text-secondary">
+                                         <p className="mb-0 small">Ninguna tienda tiene este producto en inventario actualmente.</p>
+                                     </div>
+                                 ) : (
+                                     <div className="list-group list-group-flush" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                                         {shopsForProduct.map(shop => (
+                                             <div key={shop.shop_id} className="list-group-item d-flex align-items-center justify-content-between py-3 px-1 border-secondary-subtle bg-transparent">
+                                                 <div className="pe-2">
+                                                     <div className="fw-bold d-flex align-items-center gap-2 text-body">
+                                                         {shop.shop_name}
+                                                          {shop.is_open ? (
+                                                              <span className="badge text-bg-success px-2 py-0.5 rounded-pill" style={{fontSize: '0.7rem'}}>Abierto</span>
+                                                          ) : (
+                                                              <span className="badge text-bg-danger px-2 py-0.5 rounded-pill" style={{fontSize: '0.7rem'}}>Cerrado</span>
+                                                          )}
+                                                     </div>
+                                                      <div className="text-secondary small mt-1 d-flex flex-wrap gap-2 align-items-center">
+                                                          <span>Precio local: <strong className="text-primary">{formatCurrency(shop.price)}</strong></span>
+                                                          <span className="text-muted">•</span>
+                                                          <span>Stock: <strong className={shop.stock > 0 ? "text-success" : "text-danger"}>{shop.stock > 0 ? `${shop.stock} uds` : 'Agotado'}</strong></span>
+                                                      </div>
+                                                 </div>
+                                                 <div className="d-flex align-items-center gap-2">
+                                                     {isAuthenticated && user?.role === 'client' ? (
+                                                         shop.is_enrolled ? (
+                                                             <>
+                                                                 <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2.5 py-1.5 small fw-semibold">✓ Inscrito</span>
+                                                                 <a 
+                                                                     href={`/catalogo?shopId=${shop.shop_id}`}
+                                                                     className="btn btn-primary btn-sm rounded-pill fw-bold"
+                                                                     style={{backgroundColor: tenant.theme.primaryColor, borderColor: tenant.theme.primaryColor, backgroundImage: 'none'}}
+                                                                 >
+                                                                     Ir a la Tienda
+                                                                 </a>
+                                                             </>
+                                                         ) : (
+                                                             <button 
+                                                                 className="btn btn-outline-primary btn-sm rounded-pill fw-bold"
+                                                                 onClick={() => handleEnroll(shop.shop_id)}
+                                                                 disabled={enrollingShopId === shop.shop_id}
+                                                             >
+                                                                 {enrollingShopId === shop.shop_id ? 'Inscribiendo...' : 'Inscribirse'}
+                                                             </button>
+                                                         )
+                                                     ) : !isAuthenticated ? (
+                                                         <div className="d-flex flex-column align-items-end gap-1">
+                                                             <Link 
+                                                                 to={`/client-login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`} 
+                                                                 className="btn btn-outline-secondary btn-sm rounded-pill fw-bold"
+                                                             >
+                                                                 Inscribirse
+                                                             </Link>
+                                                             <span className="text-muted" style={{fontSize: '0.65rem'}}>Inicia sesión para comprar</span>
+                                                         </div>
+                                                     ) : (
+                                                         <a 
+                                                             href={`/catalogo?shopId=${shop.shop_id}`}
+                                                             className="btn btn-outline-secondary btn-sm rounded-pill fw-bold"
+                                                         >
+                                                             Ver Tienda
+                                                         </a>
+                                                     )}
+                                                 </div>
+                                             </div>
+                                         ))}
+                                     </div>
+                                 )}
+                             </div>
+                             <div className="modal-footer border-0">
+                                 <button type="button" className="btn btn-outline-secondary rounded-pill px-4" onClick={() => setSelectedMasterProduct(null)}>Cerrar</button>
+                             </div>
+                         </div>
+                     </div>
+                 </div>
              )}
         </div>
     );

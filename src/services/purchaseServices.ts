@@ -1,9 +1,67 @@
 import { Purchase, PurchasePayload, UpdatePurchaseData } from "../types";
 import { apiClient } from "./apiClient";
 
+/** Mapea un PurchaseItem de la API (snake_case) al modelo Frontend (camelCase) */
+const mapPurchaseItemToFrontend = (item: any): any => {
+    return {
+        id: item.id,
+        purchaseId: item.purchase_id,
+        itemType: item.item_type,
+        ingredientId: item.ingredient_id,
+        productId: item.product_id,
+        name: item.name,
+        purchaseUnit: item.purchase_unit,
+        quantity: Number(item.quantity),
+        unitCost: Number(item.unit_cost),
+        consumptionUnitsPerPurchaseUnit: Number(item.consumption_units_per_purchase_unit),
+        supplierId: item.supplier_id,
+        supplierName: item.supplier_name,
+    };
+};
+
+/** Mapea una compra de la API (snake_case) al modelo Frontend (camelCase) */
+const mapPurchaseToFrontend = (p: any): Purchase => {
+    return {
+        id: p.id,
+        supplierId: p.supplier_id || '',
+        supplierName: p.supplier_name,
+        invoiceNumber: p.invoice_number || '',
+        internalInvoiceNumber: p.internal_invoice_number,
+        total: Number(p.total),
+        createdAt: p.created_at ? ({ toDate: () => new Date(p.created_at) } as any) : undefined,
+        purchasedByEmployeeId: p.purchased_by_employee_id,
+        items: p.items ? p.items.map(mapPurchaseItemToFrontend) : [],
+    };
+};
+
+/** Mapea una compra del frontend (camelCase) a la carga útil en snake_case para la API */
+const mapPurchasePayloadToBackend = (purchaseData: PurchasePayload) => {
+    return {
+        supplier_id: purchaseData.supplierId === 'MULTI' ? null : (purchaseData.supplierId || null),
+        supplier_name: purchaseData.supplierName,
+        invoice_number: purchaseData.invoiceNumber,
+        internal_invoice_number: (purchaseData as any).internalInvoiceNumber || 'PENDING',
+        total: purchaseData.total,
+        purchased_by_employee_id: purchaseData.purchasedByEmployeeId,
+        items: (purchaseData.items || []).map(item => ({
+            item_type: item.itemType,
+            ingredient_id: item.ingredientId || null,
+            product_id: item.productId || null,
+            name: item.name,
+            purchase_unit: item.purchaseUnit,
+            quantity: item.quantity,
+            unit_cost: item.unitCost,
+            consumption_units_per_purchase_unit: item.consumptionUnitsPerPurchaseUnit,
+            supplier_id: item.supplierId || null,
+            supplier_name: item.supplierName || null,
+        })),
+    };
+};
+
 /** Obtener todas las compras de una heladería */
 export const getPurchases = async (heladeriaId: string): Promise<Purchase[]> => {
-    return await apiClient<Purchase[]>(`/shops/${heladeriaId}/purchases`);
+    const purchases = await apiClient<any[]>(`/shops/${heladeriaId}/purchases`);
+    return (purchases || []).map(mapPurchaseToFrontend);
 };
 
 /** Obtiene las compras realizadas por un empleado durante una sesión de caja específica */
@@ -23,7 +81,7 @@ export const addPurchase = async (heladeriaId: string, purchaseData: PurchasePay
     // El backend en Go maneja la transacción atómica (stock, contadores, facturas) internamente.
     await apiClient(`/shops/${heladeriaId}/purchases`, {
         method: 'POST',
-        body: JSON.stringify(purchaseData)
+        body: JSON.stringify(mapPurchasePayloadToBackend(purchaseData))
     });
 };
 
@@ -32,7 +90,7 @@ export const updatePurchase = async (heladeriaId: string, purchaseId: string, da
     console.warn("Update purchase endpoint is not implemented in Go backend yet.");
     await apiClient(`/shops/${heladeriaId}/purchases/${purchaseId}`, {
         method: 'PUT',
-        body: JSON.stringify(dataToUpdate)
+        body: JSON.stringify(dataToUpdate) // If this gets implemented, it should also be mapped, but backend has no endpoint yet.
     });
 };
 

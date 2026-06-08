@@ -5,7 +5,7 @@
 CREATE TABLE IF NOT EXISTS master_product_requests (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
-    requested_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    requested_by_user_id VARCHAR(255) REFERENCES users(id) ON DELETE SET NULL,
     requested_name VARCHAR(255) NOT NULL,
     requested_brand VARCHAR(100),
     requested_barcode VARCHAR(100),

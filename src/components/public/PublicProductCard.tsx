@@ -7,9 +7,10 @@ import { useCart } from '../../context/CartContext';
 interface PublicProductCardProps {
     product: PublicProduct;
     readOnly?: boolean;
+    onClick?: () => void;
 }
 
-const PublicProductCard: FC<PublicProductCardProps> = ({product, readOnly = false}) => {
+const PublicProductCard: FC<PublicProductCardProps> = ({product, readOnly = false, onClick}) => {
     const { tenant } = useTenant();
     const { addToCart, items, decreaseQuantity } = useCart();
     
@@ -27,7 +28,11 @@ const PublicProductCard: FC<PublicProductCardProps> = ({product, readOnly = fals
     };
 
     return (
-        <div className="card h-100 shadow-sm border-0 product-card hover-lift bg-body">
+        <div 
+            className="card h-100 shadow-sm border-0 product-card hover-lift bg-body"
+            onClick={onClick}
+            style={onClick ? { cursor: 'pointer' } : undefined}
+        >
             <div className="position-relative">
                  {/* Placeholder de imagen o imagen real */}
                 <div style={{
