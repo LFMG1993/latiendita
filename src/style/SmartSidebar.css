@@ -121,3 +121,13 @@
 .nav-group-items .nav-link.active .sidebar-icon {
     color: var(--bs-primary);
 }
+
+/* Ocultar barra de desplazamiento (Scrollbar) pero mantener el scroll funcional */
+.smart-sidebar .flex-grow-1::-webkit-scrollbar {
+    width: 0px;
+    background: transparent;
+}
+.smart-sidebar .flex-grow-1 {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;  /* IE and Edge */
+}

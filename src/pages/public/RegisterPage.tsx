@@ -53,7 +53,7 @@ const RegisterPage: FC = () => {
             await registerUser(formData);
             console.log("Usuario registrado exitosamente");
             setSuccess(true);
-            setTimeout(() => navigate('/login'), 3000);
+            setTimeout(() => navigate('/pending-approval'), 1500);
         } catch (err: any) {
             setError(err.message);
         } finally {

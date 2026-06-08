@@ -34,6 +34,7 @@ export interface Heladeria {
     whatsapp?: string;
     owner: string;
     timezone: string;
+    status?: string; // 'pending', 'active', 'suspended'
     members: Record<string, ShopMember>; // Mapa de UID a perfil del miembro
     createdAt: Timestamp;
     // Multi-tenancy & Branding

@@ -1,10 +1,9 @@
-import {collection, getDocs, QuerySnapshot, DocumentData} from "firebase/firestore";
-import {db} from "../firebase";
-import {PublicProduct} from "../types/public.types";
-import {Product} from "../types";
+import { PublicProduct } from "../types/public.types";
+import { Product } from "../types";
+import { apiClient } from "./apiClient";
 
 /**
- * Mapea un producto crudo de Firestore (con datos sensibles) a una versión pública segura.
+ * Mapea un producto de la API a una versión pública segura.
  * ELIMINA: cost, recipe, history, providerId, etc.
  */
 export const mapToPublicProduct = (data: Product): PublicProduct => {
@@ -13,7 +12,7 @@ export const mapToPublicProduct = (data: Product): PublicProduct => {
         name: data.name,
         price: data.price,
         category: data.category,
-        imageURL: (data as any).imageURL || undefined, // Soporte futuro para imágenes si se agregan al tipo principal
+        imageURL: (data as any).imageURL || undefined,
         description: (data as any).description || undefined
     };
 };
@@ -24,33 +23,28 @@ export const mapToPublicProduct = (data: Product): PublicProduct => {
  */
 export const getPublicProducts = async (heladeriaId: string): Promise<PublicProduct[]> => {
     try {
-        const productsRef = collection(db, "iceCreamShops", heladeriaId, "productos");
-        const snapshot: QuerySnapshot<DocumentData> = await getDocs(productsRef);
-        
-        // Importante: La sanitización ocurre AQUÍ, antes de que los datos salgan de este servicio hacia la UI.
-        return snapshot.docs.map(doc => {
-            const rawData = { id: doc.id, ...doc.data() } as Product;
-            return mapToPublicProduct(rawData);
-        });
+        const products = await apiClient<Product[]>(`/shops/${heladeriaId}/products`);
+        return products.map(mapToPublicProduct);
     } catch (error) {
         console.error("Error al obtener productos públicos:", error);
-        // En caso de error (por ejemplo permisos), retornamos array vacío para no romper la UI.
         return [];
     }
 };
 
 /**
  * Obtiene todas las tiendas públicas disponibles.
- * Nota: En producción, esto debería estar paginado o limitado.
  */
 export const getAllPublicShops = async (): Promise<{id: string, name: string, logoURL?: string}[]> => {
     try {
-        const shopsRef = collection(db, "iceCreamShops");
-        const snapshot = await getDocs(shopsRef);
-        return snapshot.docs.map(doc => ({
-            id: doc.id,
-            name: doc.data().name || "Tienda sin nombre",
-            logoURL: doc.data().theme?.logoURL
+        // Todo: El backend actual requiere owner_id para GET /api/shops.
+        // Si tienes un endpoint público, ajusta esta URL (por ej. /api/public/shops)
+        // Por ahora haremos una llamada al endpoint general, pero fallará si el backend
+        // exige el owner_id estrictamente. Deberás crear un endpoint público en Go si quieres un marketplace.
+        const shops = await apiClient<any[]>(`/shops?public=true`);
+        return shops.map(shop => ({
+            id: shop.id,
+            name: shop.name || "Tienda sin nombre",
+            logoURL: shop.theme_logo_url
         }));
     } catch (error) {
         console.error("Error al obtener tiendas:", error);

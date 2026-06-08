@@ -1,153 +1,45 @@
-import {db} from "../firebase";
-import {
-    collection,
-    getDocs,
-    serverTimestamp,
-    CollectionReference,
-    DocumentData,
-    writeBatch,
-    doc,
-    increment,
-    runTransaction,
-    getDoc,
-    query,
-    where,
-    Timestamp
-} from "firebase/firestore";
-import {Purchase, PurchasePayload, UpdatePurchaseData} from "../types";
-
-const getPurchasesCollection = (heladeriaId: string): CollectionReference<DocumentData> => {
-    return collection(db, "iceCreamShops", heladeriaId, "compras");
-};
+import { Purchase, PurchasePayload, UpdatePurchaseData } from "../types";
+import { apiClient } from "./apiClient";
 
 /** Obtener todas las compras de una heladería */
 export const getPurchases = async (heladeriaId: string): Promise<Purchase[]> => {
-    const querySnapshot = await getDocs(getPurchasesCollection(heladeriaId));
-    return querySnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}) as Purchase);
+    return await apiClient<Purchase[]>(`/shops/${heladeriaId}/purchases`);
 };
 
 /** Obtiene las compras realizadas por un empleado durante una sesión de caja específica */
-export const getPurchasesForSession = async (heladeriaId: string, startTime: Timestamp, employeeId: string): Promise<Purchase[]> => {
-    const purchasesRef = collection(db, "iceCreamShops", heladeriaId, "compras");
-    const q = query(purchasesRef,
-        where("createdAt", ">=", startTime),
-        where("purchasedByEmployeeId", "==", employeeId)
-    );
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}) as Purchase);
+export const getPurchasesForSession = async (heladeriaId: string, startTime: any, employeeId: string): Promise<Purchase[]> => {
+    const purchases = await getPurchases(heladeriaId);
+    return purchases.filter(p => {
+        // Handle mock Date parsing 
+        const dateObj = (p.createdAt as any).toDate ? (p.createdAt as any).toDate() : new Date(p.createdAt as any);
+        const startObj = startTime.toDate ? startTime.toDate() : new Date(startTime);
+        
+        return p.purchasedByEmployeeId === employeeId && dateObj >= startObj;
+    });
 };
 
 /** Registrar una nueva compra */
 export const addPurchase = async (heladeriaId: string, purchaseData: PurchasePayload): Promise<void> => {
-    // Usamos una transacción para garantizar la atomicidad de la operación.
-    await runTransaction(db, async (transaction) => {
-        const supplierRef = doc(db, "iceCreamShops", heladeriaId, "suppliers", purchaseData.supplierId);
-        const supplierSnap = await transaction.get(supplierRef);
-
-        if (!supplierSnap.exists()) {
-            throw new Error("El proveedor seleccionado no existe.");
-        }
-
-        // 1. Obtener y actualizar el contador de facturas del proveedor.
-        const currentCount = supplierSnap.data().purchaseCount || 0;
-        const newCount = currentCount + 1;
-        const internalInvoiceNumber = String(newCount).padStart(4, '0'); // Formato "0001"
-
-        // 2. Crear la nueva compra con el número de factura interno.
-        const newPurchaseRef = doc(collection(db, "iceCreamShops", heladeriaId, "compras"));
-        transaction.set(newPurchaseRef, {
-            ...purchaseData,
-            internalInvoiceNumber,
-            createdAt: serverTimestamp(),
-        });
-
-        // 3. Actualizar el stock de cada ingrediente o producto.
-        purchaseData.items.forEach(item => {
-            if (item.itemType === 'product' && item.productId) {
-                const productRef = doc(db, "iceCreamShops", heladeriaId, "productos", item.productId);
-                const stockToAdd = item.quantity;
-                transaction.update(productRef, {stock: increment(stockToAdd)});
-            } else if (item.ingredientId) {
-                const ingredientRef = doc(db, "iceCreamShops", heladeriaId, "ingredientes", item.ingredientId);
-                const stockToAdd = item.quantity * item.consumptionUnitsPerPurchaseUnit;
-                transaction.update(ingredientRef, {stock: increment(stockToAdd)});
-            }
-        });
-
-        // 4. Actualizar el contador en el documento del proveedor.
-        transaction.update(supplierRef, {purchaseCount: newCount});
+    // El backend en Go maneja la transacción atómica (stock, contadores, facturas) internamente.
+    await apiClient(`/shops/${heladeriaId}/purchases`, {
+        method: 'POST',
+        body: JSON.stringify(purchaseData)
     });
 };
 
 /** Actualizar una compra existente y ajustar el stock correspondientemente */
 export const updatePurchase = async (heladeriaId: string, purchaseId: string, dataToUpdate: UpdatePurchaseData): Promise<void> => {
-    const purchaseRef = doc(db, "iceCreamShops", heladeriaId, "compras", purchaseId);
-    const oldPurchaseSnap = await getDoc(purchaseRef);
-    if (!oldPurchaseSnap.exists()) {
-        throw new Error("La compra que intentas actualizar no existe.");
-    }
-    const oldData = oldPurchaseSnap.data() as Purchase;
-
-    const batch = writeBatch(db);
-
-    // 1. Revertir el stock de los ítems antiguos
-    oldData.items.forEach(item => {
-        if (item.itemType === 'product' && item.productId) {
-            const productRef = doc(db, "iceCreamShops", heladeriaId, "productos", item.productId);
-            batch.update(productRef, {stock: increment(-item.quantity)});
-        } else if (item.ingredientId) {
-            const ingredientRef = doc(db, "iceCreamShops", heladeriaId, "ingredientes", item.ingredientId);
-            const stockToRevert = item.quantity * item.consumptionUnitsPerPurchaseUnit;
-            batch.update(ingredientRef, {stock: increment(-stockToRevert)});
-        }
+    console.warn("Update purchase endpoint is not implemented in Go backend yet.");
+    await apiClient(`/shops/${heladeriaId}/purchases/${purchaseId}`, {
+        method: 'PUT',
+        body: JSON.stringify(dataToUpdate)
     });
-
-    // 2. Añadir el stock de los nuevos ítems
-    dataToUpdate.items?.forEach(item => {
-        if (item.itemType === 'product' && item.productId) {
-            const productRef = doc(db, "iceCreamShops", heladeriaId, "productos", item.productId);
-            batch.update(productRef, {stock: increment(item.quantity)});
-        } else if (item.ingredientId) {
-            const ingredientRef = doc(db, "iceCreamShops", heladeriaId, "ingredientes", item.ingredientId);
-            const stockToAdd = item.quantity * item.consumptionUnitsPerPurchaseUnit;
-            batch.update(ingredientRef, {stock: increment(stockToAdd)});
-        }
-    });
-
-    // 3. Actualizar el documento de la compra
-    batch.update(purchaseRef, {
-        dataToUpdate,
-        updatedAt: serverTimestamp()
-    });
-
-    await batch.commit();
 };
 
 /** Eliminar una compra y revertir el stock de los ingredientes */
 export const deletePurchase = async (heladeriaId: string, purchaseId: string) => {
-    // Para la eliminación, simplemente revertimos el stock. Reutilizamos la lógica de update pasándole datos vacíos.
-    const purchaseRef = doc(db, "iceCreamShops", heladeriaId, "compras", purchaseId);
-    const oldPurchaseSnap = await getDoc(purchaseRef);
-
-    if (!oldPurchaseSnap.exists()) return; // Si no existe, no hay nada que hacer
-
-    const oldData = oldPurchaseSnap.data() as Purchase;
-    const batch = writeBatch(db);
-
-    // 1. Revertir el stock de los ítems
-    oldData.items.forEach(item => {
-        if (item.itemType === 'product' && item.productId) {
-            const productRef = doc(db, "iceCreamShops", heladeriaId, "productos", item.productId);
-            batch.update(productRef, {stock: increment(-item.quantity)});
-        } else if (item.ingredientId) {
-            const ingredientRef = doc(db, "iceCreamShops", heladeriaId, "ingredientes", item.ingredientId);
-            const stockToRevert = item.quantity * item.consumptionUnitsPerPurchaseUnit;
-            batch.update(ingredientRef, {stock: increment(-stockToRevert)});
-        }
+    console.warn("Delete purchase endpoint is not implemented in Go backend yet.");
+    await apiClient(`/shops/${heladeriaId}/purchases/${purchaseId}`, {
+        method: 'DELETE'
     });
-
-    // 2. Eliminar el documento de la compra
-    batch.delete(purchaseRef);
-
-    await batch.commit();
 };

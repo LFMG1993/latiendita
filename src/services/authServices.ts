@@ -9,7 +9,7 @@ const API_BASE_URL = "http://localhost:8080/api";
  */
 export const registerUser = async (formData: RegisterFormData): Promise<any> => {
     try {
-        const response = await fetch(`${API_BASE_URL}/users`, {
+        const response = await fetch(`${API_BASE_URL}/register-saas`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -21,7 +21,7 @@ export const registerUser = async (formData: RegisterFormData): Promise<any> => 
                 password: formData.password, // Pasamos la contraseña para cifrarla en el backend
                 identify: formData.identify,
                 phone: formData.phone,
-                role: "owner"
+                shop_name: formData.iceCreamShopName
             })
         });
 

@@ -30,6 +30,22 @@ export const ThemeProvider: FC<PropsWithChildren> = ({children}) => {
         localStorage.setItem('theme', theme);
     }, [theme]);
 
+    // 3. Escuchar cambios en el tema del sistema (si el usuario no ha forzado un tema)
+    useEffect(() => {
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        
+        const handleChange = (e: MediaQueryListEvent) => {
+            // Solo aplicamos el cambio del sistema si el usuario decide borrar su localStorage o podemos forzar el sincro
+            const newTheme = e.matches ? 'dark' : 'light';
+            setTheme(newTheme);
+            document.documentElement.setAttribute('data-bs-theme', newTheme);
+        };
+
+        // Agregar listener
+        mediaQuery.addEventListener('change', handleChange);
+        return () => mediaQuery.removeEventListener('change', handleChange);
+    }, []);
+
     const toggleTheme = () => {
         setTheme(prev => prev === 'light' ? 'dark' : 'light');
     };

@@ -1,67 +1,61 @@
-import {db} from "../firebase";
-import {
-    collection, doc, serverTimestamp, query, where, getDocs, limit, updateDoc, addDoc,
-} from "firebase/firestore";
-import {NewCashSessionData, CashSession, Purchase, Expense} from "../types";
-import {getSalesByDateRange} from "./saleServices";
+import { NewCashSessionData, CashSession, Purchase, Expense } from "../types";
+import { getSalesByDateRange } from "./saleServices";
+import { apiClient } from "./apiClient";
 
 /**
  * Busca si hay una sesión de caja abierta actualmente en la heladería.
- * @param heladeriaId
  */
 export const getOpenCashSession = async (heladeriaId: string): Promise<CashSession | null> => {
-    const sessionsRef = collection(db, "iceCreamShops", heladeriaId, "cashSessions");
-    const q = query(sessionsRef, where("status", "==", "open"), limit(1));
-    const querySnapshot = await getDocs(q);
-
-    if (querySnapshot.empty) {
+    try {
+        const session = await apiClient<CashSession>(`/shops/${heladeriaId}/cash-sessions/open`);
+        // If the backend returns null/empty obj it means no session is open
+        if (!session || !session.id) return null;
+        
+        return {
+            ...session,
+            startTime: { toDate: () => new Date(session.startTime as any) }
+        } as any;
+    } catch {
         return null;
     }
-    return {id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data()} as CashSession;
 };
 
 /**
  * Inicia una nueva sesión de caja.
- * @param heladeriaId
- * @param sessionData
  */
 export const startCashSession = async (heladeriaId: string, sessionData: NewCashSessionData): Promise<void> => {
-    const sessionsRef = collection(db, "iceCreamShops", heladeriaId, "cashSessions");
-    await addDoc(sessionsRef, {
-        ...sessionData,
-        status: 'open',
-        startTime: serverTimestamp(),
+    await apiClient(`/shops/${heladeriaId}/cash-sessions`, {
+        method: 'POST',
+        body: JSON.stringify({
+            employeeId: sessionData.employeeId,
+            employeeName: sessionData.employeeName,
+            openingBalance: sessionData.openingBalance
+        })
     });
 };
 
 /**
  * Cierra una sesión de caja, calculando todos los totales.
- * @param heladeriaId
- * @param session
- * @param closingData
  */
-export const closeCashSession = async (heladeriaId: string, session: CashSession, closingData: {
-    closingBalance: number,
-    notes: string | undefined
-}) => {
+export const closeCashSession = async (
+    heladeriaId: string, 
+    session: CashSession, 
+    closingData: { closingBalance: number, notes: string | undefined }
+) => {
     // 1. Obtener todas las ventas realizadas durante esta sesión
     const sales = await getSalesByDateRange(heladeriaId, session.startTime.toDate(), new Date());
 
     // 2. Obtener las compras (gastos) realizadas por el empleado durante la sesión
-    const purchasesRef = collection(db, "iceCreamShops", heladeriaId, "compras");
-    const purchasesQuery = query(purchasesRef,
-        where("createdAt", ">=", session.startTime),
-        where("purchasedByEmployeeId", "==", session.employeeId)
-    );
-    const purchasesSnapshot = await getDocs(purchasesQuery);
-    const expensesFromPurchases = purchasesSnapshot.docs.map(doc => doc.data() as Purchase);
-    const totalPurchaseExpenses = expensesFromPurchases.reduce((sum, exp) => sum + Number(exp.total), 0);
+    const purchases = await apiClient<Purchase[]>(`/shops/${heladeriaId}/purchases`);
+    const sessionPurchases = purchases.filter(p => {
+        const pDate = new Date(p.createdAt as any);
+        return p.purchasedByEmployeeId === session.employeeId && pDate >= session.startTime.toDate();
+    });
+    const totalPurchaseExpenses = sessionPurchases.reduce((sum, exp) => sum + Number(exp.total), 0);
 
-    // 2.1. OBTENER LOS GASTOS OPERATIVOS REGISTRADOS EN LA SESIÓN (LA PARTE QUE FALTABA)
-    const expensesRef = collection(db, "iceCreamShops", heladeriaId, "expenses");
-    const expensesQuery = query(expensesRef, where("sessionId", "==", session.id));
-    const expensesSnapshot = await getDocs(expensesQuery);
-    const operationalExpenses = expensesSnapshot.docs.map(doc => doc.data() as Expense);
+    // 2.1. OBTENER LOS GASTOS OPERATIVOS REGISTRADOS EN LA SESIÓN
+    const allExpenses = await apiClient<Expense[]>(`/shops/${heladeriaId}/expenses`);
+    const operationalExpenses = allExpenses.filter(e => e.sessionId === session.id);
     const totalOperationalExpenses = operationalExpenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
 
     // 2.2. CALCULAR EL TOTAL DE GASTOS CORRECTO
@@ -71,6 +65,7 @@ export const closeCashSession = async (heladeriaId: string, session: CashSession
     let cashSales = 0;
     let transferSales = 0;
     sales.forEach(sale => {
+        if (!sale.payments) return;
         sale.payments.forEach(payment => {
             if (payment.type === 'cash') {
                 cashSales += Number(payment.amount);
@@ -83,26 +78,19 @@ export const closeCashSession = async (heladeriaId: string, session: CashSession
     const expectedCashInBox = Number(session.openingBalance) + cashSales - totalExpenses;
     const difference = closingData.closingBalance - expectedCashInBox;
 
-    // 4. Actualizar el documento de la sesión
-    const sessionRef = doc(db, "iceCreamShops", heladeriaId, "cashSessions", session.id);
-    await updateDoc(sessionRef, {
-        ...closingData,
-        // Guardamos cada tipo de egreso en su propio array para una auditoría clara y estructurada.
-        purchasesSummary: expensesFromPurchases.map(exp => ({
-            description: `Compra #${exp.invoiceNumber || exp.id.substring(0, 5)}`,
-            amount: exp.total
-        })),
-        operationalExpenses: operationalExpenses.map(exp => ({
-            description: exp.description,
-            amount: exp.amount
-        })),
-        status: 'closed',
-        endTime: serverTimestamp(),
-        cashSales,
-        transferSales,
-        totalSales: cashSales + transferSales,
-        totalExpenses,
-        expectedCashInBox,
-        difference,
+    // 4. Send PUT request to close session
+    await apiClient(`/cash-sessions/${session.id}/close`, {
+        method: 'PUT',
+        body: JSON.stringify({
+            closingBalance: closingData.closingBalance,
+            notes: closingData.notes,
+            cashSales,
+            transferSales,
+            totalSales: cashSales + transferSales,
+            totalExpenses,
+            expectedCashInBox,
+            difference,
+            unregisteredSales: 0 // Default logic
+        })
     });
 };

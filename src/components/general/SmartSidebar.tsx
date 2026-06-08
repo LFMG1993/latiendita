@@ -28,7 +28,8 @@ const SmartSidebar: FC<SmartSidebarProps> = ({isExpanded, setIsExpanded}) => {
         sales: false,
         inventory: false,
         finance: false,
-        settings: false
+        settings: false,
+        saas: false
     });
     const isOwner = user?.role === 'owner';
 
@@ -87,7 +88,7 @@ const SmartSidebar: FC<SmartSidebarProps> = ({isExpanded, setIsExpanded}) => {
             id="sidebarMenu"
             onMouseEnter={() => setIsExpanded(true)}
             onMouseLeave={() => setIsExpanded(false)}
-            className={`smart-sidebar d-md-block sidebar d-flex flex-column ${isExpanded ? 'sidebar-expanded' : ''}`}
+            className={`smart-sidebar sidebar d-flex flex-column ${isExpanded ? 'sidebar-expanded' : ''}`}
         >
             <div className="d-flex align-items-center justify-content-center py-3 border-bottom border-secondary-subtle">
                 <button 
@@ -156,6 +157,36 @@ const SmartSidebar: FC<SmartSidebarProps> = ({isExpanded, setIsExpanded}) => {
                             </li>
                         );
                     })}
+
+                    {/* Link especial para SuperAdministrador */}
+                    {user?.role === 'superAdmin' && (
+                        <li className="nav-group mt-3 border-top border-secondary-subtle pt-3">
+                            <button
+                                className="nav-group-header text-warning"
+                                onClick={() => toggleGroup('saas')}
+                            >
+                                <GearFill className="sidebar-icon text-warning" size={20} />
+                                <span className="sidebar-text fw-bold">Administración SaaS</span>
+                                <span className="sidebar-text ms-auto text-warning">
+                                    {collapsedGroups['saas'] ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                                </span>
+                            </button>
+                            <ul className={`nav-group-items ${collapsedGroups['saas'] ? 'collapsed' : ''}`}>
+                                <li className="nav-item">
+                                    <NavLink className="nav-link position-relative text-warning text-opacity-75" to="/super-admin" end>
+                                        <Shop className="sidebar-icon text-warning text-opacity-75" size={20}/>
+                                        <span className="sidebar-text">Tiendas (SaaS)</span>
+                                    </NavLink>
+                                </li>
+                                <li className="nav-item">
+                                    <NavLink className="nav-link position-relative text-warning text-opacity-75" to="/super-admin/clients" end>
+                                        <PersonCircle className="sidebar-icon text-warning text-opacity-75" size={20}/>
+                                        <span className="sidebar-text">Clientes y Facturación</span>
+                                    </NavLink>
+                                </li>
+                            </ul>
+                        </li>
+                    )}
 
                     {/* Acceso directo a Mi Menú Público (Solo si hay tienda activa) */}
                     {activeIceCreamShopId && (

@@ -18,6 +18,7 @@ import {auth} from './firebase';
 import {onAuthStateChanged} from 'firebase/auth';
 import {useAuthStore} from './store/authStore';
 import {getHeladeriasByUserId, getUserProfileData} from './services/userServices';
+import PendingApprovalPage from "./pages/public/PendingApprovalPage.tsx";
 import ProtectedRoute from './components/ProtectedRoute';
 import IceCreamShopPage from "./pages/admin/IceCreamShopPage.tsx";
 import FullScreenLoader from "./components/general/FullScreenLoader";
@@ -26,6 +27,10 @@ import ProfilePage from "./pages/admin/ProfilePage.tsx";
 import ProductsPage from "./pages/admin/ProductsPage.tsx";
 import PurchasesPage from "./pages/admin/PurchasesPage.tsx";
 import TeamManagementPage from "./pages/admin/TeamManagementPage.tsx";
+import {AdminProductsPage} from "./pages/admin/AdminProductsPage.tsx";
+import {SuperAdminDashboard} from "./pages/admin/SuperAdminDashboard.tsx";
+import {SaasClientsPage} from "./pages/admin/SaasClientsPage.tsx";
+import {PublicShopPage} from "./pages/public/PublicShopPage.tsx";
 import EmployeeClaim from "./pages/EmployeeClaim";
 import SuppliersPage from "./pages/admin/SuppliersPage.tsx";
 import PointOfSalePage from "./pages/admin/PointOfSalePage.tsx";
@@ -37,7 +42,6 @@ import ExpensesPage from "./pages/admin/ExpensesPage.tsx";
 import {checkSchedule} from "./utils/scheduleUtils.ts";
 import {Heladeria} from "./types";
 import UpdateNotification from "./components/general/UpdateNotification.tsx";
-import {SuperAdminDashboard} from "./pages/admin/SuperAdminDashboard.tsx";
 import {TenantProvider} from "./context/TenantContext";
 import {ThemeProvider} from "./context/ThemeContext";
 import {ToastProvider} from "./context/ToastContext";
@@ -67,46 +71,10 @@ const App: FC = () => {
                 try {
                     const parsedUser = JSON.parse(savedUserJson);
                     
-                    // Crear heladería mock si el usuario es owner/employee para evitar dependencias con Firestore
                     let heladerias: Heladeria[] = [];
                     if (parsedUser.role !== 'client') {
-                        const mockHeladeria: Heladeria = {
-                            id: "mock-shop-id-123",
-                            name: "Mi Heladería Local",
-                            owner: parsedUser.uid,
-                            timezone: "America/Bogota",
-                            createdAt: Timestamp.fromDate(new Date()),
-                            theme: {
-                                primaryColor: "#0d6efd",
-                                secondaryColor: "#6c757d"
-                            },
-                            terminology: {
-                                shopLabel: "Heladería",
-                                productLabel: "Producto"
-                            },
-                            members: {
-                                [parsedUser.uid]: {
-                                    roleId: "owner-role-id",
-                                    role: "owner",
-                                    email: parsedUser.email,
-                                    addedAt: Timestamp.fromDate(new Date()),
-                                    permissions: {
-                                        shop_details_manage: true,
-                                        pos_access: true,
-                                        ingredients_view: true,
-                                        products_view: true,
-                                        purchases_view: true,
-                                        team_view: true,
-                                        promotions_view: true,
-                                        suppliers_view: true,
-                                        reports_view_sales: true,
-                                        cash_session_access: true,
-                                        expenses_view: true
-                                    }
-                                }
-                            }
-                        };
-                        heladerias = [mockHeladeria];
+                        // Cargar heladerías reales desde el backend
+                        heladerias = await getHeladeriasByUserId(parsedUser.id);
                     }
 
                     // Completamos el perfil del usuario para el store
@@ -127,12 +95,12 @@ const App: FC = () => {
                         permissions: parsedUser.permissions || [],
                     };
 
-                    setAuthUser(fullUserProfile);
                     setUserIceCreamShop(heladerias);
+                    setAuthUser(fullUserProfile);
                 } catch (error) {
                     console.error("Error cargando sesión local:", error);
-                    setAuthUser(null);
                     setUserIceCreamShop([]);
+                    setAuthUser(null);
                 } finally {
                     setLoading(false);
                 }
@@ -150,6 +118,19 @@ const App: FC = () => {
     // Se activa cuando el usuario se carga en el store.
     useEffect(() => {
         if (user && !initialRedirectDone) {
+            // Verificar si el owner tiene solo tiendas en estado 'pending'
+            if (user.role === 'owner') {
+                const iceCreamShops = useAuthStore.getState().iceCreamShops;
+                const hasActiveShop = iceCreamShops.some(shop => shop.status === 'active' || shop.status === undefined);
+                const hasPendingShop = iceCreamShops.some(shop => shop.status === 'pending');
+                
+                if (!hasActiveShop && hasPendingShop) {
+                    navigate('/pending-approval', {replace: true});
+                    setInitialRedirectDone(true);
+                    return;
+                }
+            }
+
             if (user.role === 'employee') {
                 navigate('/cash-session', {replace: true});
             } else if (user.role === 'owner') {
@@ -178,11 +159,18 @@ const App: FC = () => {
                 <Route path="/catalogo" element={<ProductShowcasePage/>}/>
                 <Route path="/client-login" element={<ClientLoginPage/>}/>
                 <Route path="/client-register" element={<ClientRegisterPage/>}/>
+                <Route path="/pending-approval" element={<PendingApprovalPage/>}/>
                 <Route path="/client/dashboard" element={<ProtectedRoute><ClientDashboardPage/></ProtectedRoute>}/>
                 {/* Rutas protegidas */}
                 <Route path="/dashboard"
                        element={<ProtectedRoute
                            requiredPermission="shop_details_manage"><MainLayout><DashboardPage/></MainLayout></ProtectedRoute>}/>
+                <Route path="/super-admin"
+                       element={<ProtectedRoute
+                           requiredPermission="super_admin_access"><MainLayout><SuperAdminDashboard/></MainLayout></ProtectedRoute>}/>
+                <Route path="/super-admin/clients"
+                       element={<ProtectedRoute
+                           requiredPermission="super_admin_access"><MainLayout><SaasClientsPage/></MainLayout></ProtectedRoute>}/>
                 <Route path="/orders"
                        element={<ProtectedRoute
                            requiredPermission="pos_access"><MainLayout><AdminOrdersPage/></MainLayout></ProtectedRoute>}/>
@@ -230,8 +218,6 @@ const App: FC = () => {
                 <Route path="/expenses"
                        element={<ProtectedRoute
                            requiredPermission="expenses_view"><MainLayout><ExpensesPage/></MainLayout></ProtectedRoute>}/>
-                <Route path="/super-admin"
-                       element={<ProtectedRoute><MainLayout><SuperAdminDashboard/></MainLayout></ProtectedRoute>}/>
             </Routes>
         </>
     );

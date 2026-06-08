@@ -1,6 +1,6 @@
 import {FC, useState} from 'react';
 import {Heladeria} from "../../types";
-import {updateHeladeria} from "../../services/userServices"; 
+import {updateShop} from "../../services/shopServices"; 
 import {navItemsConfig} from "../../config/navConfig";
 
 interface CompanyModulesManagerProps {
@@ -38,7 +38,7 @@ export const CompanyModulesManager: FC<CompanyModulesManagerProps> = ({show, onC
                 [moduleName]: !currentlyEnabled
             };
 
-            await updateHeladeria(shop.id, {modules: newModules});
+            await updateShop(shop.id, {modules: newModules});
             onUpdate();
         } catch (err: any) {
             console.error("Error updating modules:", err);
@@ -60,7 +60,7 @@ export const CompanyModulesManager: FC<CompanyModulesManagerProps> = ({show, onC
                 [permissionId]: !currentlyEnabled
             };
 
-            await updateHeladeria(shop.id, {features: newFeatures});
+            await updateShop(shop.id, {features: newFeatures});
             onUpdate();
         } catch (err: any) {
             console.error("Error updating feature:", err);

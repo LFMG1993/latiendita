@@ -28,11 +28,11 @@ const TeamManagementPage: FC = () => {
     const [editingRole, setEditingRole] = useState<Role | undefined>(undefined);
     const [refetchTrigger, setRefetchTrigger] = useState(0);
 
-    const isOwner = user?.role === 'owner';
+    const hasAccess = user?.role === 'owner' || user?.role === 'superAdmin';
 
     useEffect(() => {
         const fetchData = async () => {
-            if (!shopId || !isOwner) {
+            if (!shopId || !hasAccess) {
                 setPageLoading(false);
                 return;
             }
@@ -74,16 +74,24 @@ const TeamManagementPage: FC = () => {
         };
 
         fetchData();
-    }, [shopId, isOwner, refetchTrigger]);
+    }, [shopId, hasAccess, refetchTrigger]);
 
     if (authLoading || pageLoading) {
         return <FullScreenLoader/>;
     }
 
-    if (!isOwner) {
+    if (!hasAccess) {
         return (
             <main className="px-md-4">
-                <div className="alert alert-danger">No tienes permiso para acceder a esta sección.</div>
+                <div className="alert alert-danger mt-4">No tienes permiso para acceder a esta sección.</div>
+            </main>
+        );
+    }
+
+    if (!shopId) {
+        return (
+            <main className="px-md-4">
+                <div className="alert alert-warning mt-4">Debes seleccionar o tener una tienda activa para gestionar su equipo de trabajo.</div>
             </main>
         );
     }

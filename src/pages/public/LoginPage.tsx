@@ -1,6 +1,7 @@
 import {useState, FC, FormEvent, ChangeEvent, useEffect} from 'react';
 import {Link} from 'react-router-dom';
 import {loginUser, logoutUser} from '../../services/authServices.ts';
+import {getHeladeriasByUserId} from '../../services/userServices.ts';
 import {useAuthStore} from '../../store/authStore.ts';
 import '../../style/Login.css';
 
@@ -10,7 +11,7 @@ const LoginPage: FC = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [stage, setStage] = useState<'idle' | 'expanding' | 'ready'>('idle');
-    const {setAuthUser} = useAuthStore();
+    const {setAuthUser, setUserIceCreamShop} = useAuthStore();
 
     useEffect(() => {
         // Start expanding after a tiny delay
@@ -39,6 +40,19 @@ const LoginPage: FC = () => {
                 setError('Este portal es solo para administradores y empleados. Si eres cliente, utiliza el acceso de clientes.');
                 setLoading(false);
                 return;
+            }
+
+            // Cargar tiendas del usuario si es owner o empleado
+            if (userData.role !== 'client') {
+                try {
+                    const shops = await getHeladeriasByUserId(userData.id);
+                    setUserIceCreamShop(shops);
+                    // Actualizar el perfil con las tiendas
+                    userData.iceCreamShopIds = shops.map(h => h.id);
+                } catch (err) {
+                    console.error("Error fetching user shops during login:", err);
+                    setUserIceCreamShop([]);
+                }
             }
 
             // Actualizamos la sesión en el store

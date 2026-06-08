@@ -15,6 +15,7 @@ type Shop struct {
 	WhatsApp    *string   `json:"whatsapp,omitempty"`
 	OwnerID     string    `json:"owner_id"`
 	Timezone    string    `json:"timezone"`
+	Status      string    `json:"status"` // pending, active, suspended
 	BusinessTypeID *string `json:"business_type_id,omitempty"`
 
 	// Branding

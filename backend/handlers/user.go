@@ -265,3 +265,146 @@ func (h *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(user)
 }
+
+// GetOwners handles GET /api/admin/owners to return all registered owners
+func (h *UserHandler) GetOwners(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Method not allowed"})
+		return
+	}
+
+	query := `
+		SELECT id, first_name, last_name, email, identify, document_id, phone, role, photo_url, created_at
+		FROM users
+		WHERE role = 'owner'
+		ORDER BY created_at DESC
+	`
+
+	rows, err := h.DB.Query(query)
+	if err != nil {
+		log.Printf("Error querying owners: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
+		return
+	}
+	defer rows.Close()
+
+	owners := []models.User{}
+	for rows.Next() {
+		var u models.User
+		var createdAt time.Time
+		if err := rows.Scan(
+			&u.ID, &u.FirstName, &u.LastName, &u.Email,
+			&u.Identify, &u.DocumentID, &u.Phone, &u.Role,
+			&u.PhotoURL, &createdAt,
+		); err != nil {
+			log.Printf("Error scanning owner row: %v", err)
+			continue
+		}
+		u.CreatedAt = &createdAt
+		// Don't leak hashes or sensitive data
+		u.PasswordHash = ""
+		u.Password = ""
+		owners = append(owners, u)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(owners)
+}
+
+// RegisterSaaS handles POST /api/register-saas
+// Registra un nuevo usuario (owner) y crea su tienda en estado 'pending' atómicamente
+func (h *UserHandler) RegisterSaaS(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	type SaasRegisterRequest struct {
+		FirstName string `json:"first_name"`
+		LastName  string `json:"last_name"`
+		Email     string `json:"email"`
+		Password  string `json:"password"`
+		Identify  string `json:"identify"`
+		Phone     string `json:"phone"`
+		ShopName  string `json:"shop_name"`
+	}
+
+	var req SaasRegisterRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		jsonError(w, "Invalid JSON format", http.StatusBadRequest)
+		return
+	}
+
+	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
+	if req.Email == "" || req.Password == "" || req.ShopName == "" {
+		jsonError(w, "Email, password, and shop_name are required", http.StatusBadRequest)
+		return
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	tx, err := h.DB.Begin()
+	if err != nil {
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	// 1. Crear el usuario
+	userID := generateUUID()
+	userQuery := `
+		INSERT INTO users (id, first_name, last_name, email, identify, phone, role, password_hash)
+		VALUES ($1, $2, $3, $4, $5, $6, 'owner', $7)
+	`
+	if _, err := tx.Exec(userQuery, userID, req.FirstName, req.LastName, req.Email, req.Identify, req.Phone, string(hashedPassword)); err != nil {
+		if strings.Contains(err.Error(), "unique constraint") || strings.Contains(err.Error(), "duplicate key") {
+			jsonError(w, "Email already registered", http.StatusConflict)
+		} else {
+			log.Printf("Error inserting user: %v", err)
+			jsonError(w, "Error creating user", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// 2. Crear la tienda en estado pending
+	shopQuery := `
+		INSERT INTO shops (name, owner_id, timezone, status)
+		VALUES ($1, $2, 'America/Bogota', 'pending')
+		RETURNING id
+	`
+	var shopID string
+	if err := tx.QueryRow(shopQuery, req.ShopName, userID).Scan(&shopID); err != nil {
+		log.Printf("Error inserting shop: %v", err)
+		jsonError(w, "Error creating shop", http.StatusInternalServerError)
+		return
+	}
+
+	// 3. Vincular como miembro
+	memberQuery := `
+		INSERT INTO shop_members (shop_id, user_id, role, permissions)
+		VALUES ($1, $2, 'owner', '{}')
+	`
+	if _, err := tx.Exec(memberQuery, shopID, userID); err != nil {
+		log.Printf("Error inserting shop member: %v", err)
+		jsonError(w, "Error linking shop", http.StatusInternalServerError)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Account created successfully. Pending approval.", "user_id": userID})
+}

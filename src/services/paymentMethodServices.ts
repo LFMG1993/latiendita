@@ -1,48 +1,40 @@
-import {db} from "../firebase.ts";
-import {collection, getDocs, query, where, orderBy, addDoc, serverTimestamp, doc, updateDoc, deleteDoc} from "firebase/firestore";
-import {NewPaymentMethodData, PaymentMethod, UpdatePaymentMethodData} from "../types";
+import { NewPaymentMethodData, PaymentMethod, UpdatePaymentMethodData } from "../types";
+import { apiClient } from "./apiClient";
 
 /**
- * Obtiene todos los métodos de pago ACTIVOS de una heladería.
- * @param heladeriaId - El ID de la heladería.
+ * Obtiene TODOS los métodos de pago de una heladería.
  */
-export const getActivePaymentMethods = async (heladeriaId: string): Promise<PaymentMethod[]> => {
-    const methodsRef = collection(db, "iceCreamShops", heladeriaId, "paymentMethods");
-    // Sin orderBy para evitar requerir un índice compuesto. Ordenamos en memoria.
-    const q = query(methodsRef);
-    const querySnapshot = await getDocs(q);
-    const allMethods = querySnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}) as PaymentMethod);
-    // Filtrar solo los habilitados, ordenar por nombre en memoria
-    return allMethods
-        .filter(m => m.enabled === true)
-        .sort((a, b) => a.name.localeCompare(b.name));
+export const getAllPaymentMethods = async (heladeriaId: string): Promise<PaymentMethod[]> => {
+    return await apiClient<PaymentMethod[]>(`/shops/${heladeriaId}/payment-methods`);
 };
 
 /**
- * Obtiene TODOS los métodos de pago de una heladería para la página de gestión.
- * @param heladeriaId - El ID de la heladería.
+ * Obtiene todos los métodos de pago ACTIVOS de una heladería.
  */
-export const getAllPaymentMethods = async (heladeriaId: string): Promise<PaymentMethod[]> => {
-    const methodsRef = collection(db, "iceCreamShops", heladeriaId, "paymentMethods");
-    const q = query(methodsRef, orderBy("name", "asc"));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}) as PaymentMethod);
+export const getActivePaymentMethods = async (heladeriaId: string): Promise<PaymentMethod[]> => {
+    const allMethods = await getAllPaymentMethods(heladeriaId);
+    return allMethods.filter(m => m.enabled === true);
 };
 
 /** Añadir un nuevo método de pago */
 export const addPaymentMethod = async (heladeriaId: string, data: NewPaymentMethodData): Promise<void> => {
-    const methodsRef = collection(db, "iceCreamShops", heladeriaId, "paymentMethods");
-    await addDoc(methodsRef, {...data, createdAt: serverTimestamp()});
+    await apiClient(`/shops/${heladeriaId}/payment-methods`, {
+        method: 'POST',
+        body: JSON.stringify(data)
+    });
 };
 
 /** Actualizar un método de pago existente */
 export const updatePaymentMethod = async (heladeriaId: string, methodId: string, data: UpdatePaymentMethodData): Promise<void> => {
-    const methodRef = doc(db, "iceCreamShops", heladeriaId, "paymentMethods", methodId);
-    await updateDoc(methodRef, {...data, updatedAt: serverTimestamp()});
+    await apiClient(`/shops/${heladeriaId}/payment-methods/${methodId}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+    });
 };
 
 /** Eliminar un método de pago */
 export const deletePaymentMethod = async (heladeriaId: string, methodId: string): Promise<void> => {
-    const methodRef = doc(db, "iceCreamShops", heladeriaId, "paymentMethods", methodId);
-    await deleteDoc(methodRef);
+    await apiClient(`/shops/${heladeriaId}/payment-methods/${methodId}`, {
+        method: 'DELETE'
+    });
 };

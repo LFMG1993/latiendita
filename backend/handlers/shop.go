@@ -62,6 +62,10 @@ func (h *ShopHandler) CreateShop(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if shop.Status == "" {
+		shop.Status = "active" // Default for manual creation by admin
+	}
+
 	// Set defaults
 	if shop.Timezone == "" {
 		shop.Timezone = "America/Bogota"
@@ -104,8 +108,8 @@ func (h *ShopHandler) CreateShop(w http.ResponseWriter, r *http.Request) {
 			name, address, photo_url, whatsapp, owner_id, timezone, business_type_id,
 			theme_primary_color, theme_secondary_color, theme_logo_url,
 			terminology_shop_label, terminology_product_label,
-			modules, features
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+			modules, features, status
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
 		RETURNING id, created_at, updated_at
 	`
 
@@ -116,7 +120,7 @@ func (h *ShopHandler) CreateShop(w http.ResponseWriter, r *http.Request) {
 		shop.OwnerID, shop.Timezone, shop.BusinessTypeID,
 		shop.ThemePrimaryColor, shop.ThemeSecondaryColor, shop.ThemeLogoURL,
 		shop.TerminologyShopLabel, shop.TerminologyProductLabel,
-		modulesJSON, featuresJSON,
+		modulesJSON, featuresJSON, shop.Status,
 	).Scan(&shop.ID, &createdAt, &updatedAt)
 	if err != nil {
 		log.Printf("Error inserting shop: %v", err)
@@ -167,7 +171,7 @@ func (h *ShopHandler) GetShopsByOwner(w http.ResponseWriter, r *http.Request) {
 		SELECT id, name, address, photo_url, whatsapp, owner_id, timezone, business_type_id,
 		       theme_primary_color, theme_secondary_color, theme_logo_url,
 		       terminology_shop_label, terminology_product_label,
-		       modules, features, created_at, updated_at
+		       modules, features, status, created_at, updated_at
 		FROM shops
 		WHERE owner_id = $1
 		ORDER BY created_at ASC
@@ -190,7 +194,58 @@ func (h *ShopHandler) GetShopsByOwner(w http.ResponseWriter, r *http.Request) {
 			&s.OwnerID, &s.Timezone, &s.BusinessTypeID,
 			&s.ThemePrimaryColor, &s.ThemeSecondaryColor, &s.ThemeLogoURL,
 			&s.TerminologyShopLabel, &s.TerminologyProductLabel,
-			&modulesJSON, &featuresJSON,
+			&modulesJSON, &featuresJSON, &s.Status,
+			&createdAt, &updatedAt,
+		); err != nil {
+			log.Printf("Error scanning shop row: %v", err)
+			continue
+		}
+		s.Modules = modulesJSON
+		s.Features = featuresJSON
+		s.CreatedAt = &createdAt
+		s.UpdatedAt = &updatedAt
+		shops = append(shops, s)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(shops)
+}
+
+// GetAllShops handles GET /api/admin/shops
+// Returns all shops in the system (for superAdmins)
+func (h *ShopHandler) GetAllShops(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	query := `
+		SELECT id, name, address, photo_url, whatsapp, owner_id, timezone, business_type_id,
+		       theme_primary_color, theme_secondary_color, theme_logo_url,
+		       terminology_shop_label, terminology_product_label,
+		       modules, features, status, created_at, updated_at
+		FROM shops
+		ORDER BY created_at ASC
+	`
+	rows, err := h.DB.Query(query)
+	if err != nil {
+		log.Printf("Error querying all shops: %v", err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	shops := []models.Shop{}
+	for rows.Next() {
+		var s models.Shop
+		var createdAt, updatedAt time.Time
+		var modulesJSON, featuresJSON []byte
+		if err := rows.Scan(
+			&s.ID, &s.Name, &s.Address, &s.PhotoURL, &s.WhatsApp,
+			&s.OwnerID, &s.Timezone, &s.BusinessTypeID,
+			&s.ThemePrimaryColor, &s.ThemeSecondaryColor, &s.ThemeLogoURL,
+			&s.TerminologyShopLabel, &s.TerminologyProductLabel,
+			&modulesJSON, &featuresJSON, &s.Status,
 			&createdAt, &updatedAt,
 		); err != nil {
 			log.Printf("Error scanning shop row: %v", err)
@@ -226,7 +281,7 @@ func (h *ShopHandler) GetShopByID(w http.ResponseWriter, r *http.Request) {
 		SELECT id, name, address, photo_url, whatsapp, owner_id, timezone, business_type_id,
 		       theme_primary_color, theme_secondary_color, theme_logo_url,
 		       terminology_shop_label, terminology_product_label,
-		       modules, features, created_at, updated_at
+		       modules, features, status, created_at, updated_at
 		FROM shops WHERE id = $1
 	`
 	var s models.Shop
@@ -238,7 +293,7 @@ func (h *ShopHandler) GetShopByID(w http.ResponseWriter, r *http.Request) {
 		&s.OwnerID, &s.Timezone, &s.BusinessTypeID,
 		&s.ThemePrimaryColor, &s.ThemeSecondaryColor, &s.ThemeLogoURL,
 		&s.TerminologyShopLabel, &s.TerminologyProductLabel,
-		&modulesJSON, &featuresJSON,
+		&modulesJSON, &featuresJSON, &s.Status,
 		&createdAt, &updatedAt,
 	)
 	if err == sql.ErrNoRows {
@@ -292,28 +347,40 @@ func (h *ShopHandler) UpdateShop(w http.ResponseWriter, r *http.Request) {
 			theme_logo_url = $8,
 			terminology_shop_label = COALESCE(NULLIF($9, ''), terminology_shop_label),
 			terminology_product_label = COALESCE(NULLIF($10, ''), terminology_product_label),
+			modules = COALESCE($11, modules),
+			features = COALESCE($12, features),
 			updated_at = NOW()
-		WHERE id = $11
+		WHERE id = $13
 		RETURNING id, name, address, photo_url, whatsapp, owner_id, timezone, business_type_id,
 		          theme_primary_color, theme_secondary_color, theme_logo_url,
 		          terminology_shop_label, terminology_product_label,
-		          modules, features, created_at, updated_at
+		          modules, features, status, created_at, updated_at
 	`
 
 	var s models.Shop
 	var createdAt, updatedAt time.Time
 	var modulesJSON, featuresJSON []byte
 
+	// Handle optional JSON objects
+	var modulesArg, featuresArg interface{}
+	if shop.Modules != nil {
+		modulesArg = shop.Modules
+	}
+	if shop.Features != nil {
+		featuresArg = shop.Features
+	}
+
 	err := h.DB.QueryRow(query,
 		shop.Name, shop.Address, shop.PhotoURL, shop.WhatsApp, shop.Timezone,
 		shop.ThemePrimaryColor, shop.ThemeSecondaryColor, shop.ThemeLogoURL,
-		shop.TerminologyShopLabel, shop.TerminologyProductLabel, id,
+		shop.TerminologyShopLabel, shop.TerminologyProductLabel,
+		modulesArg, featuresArg, id,
 	).Scan(
 		&s.ID, &s.Name, &s.Address, &s.PhotoURL, &s.WhatsApp,
 		&s.OwnerID, &s.Timezone, &s.BusinessTypeID,
 		&s.ThemePrimaryColor, &s.ThemeSecondaryColor, &s.ThemeLogoURL,
 		&s.TerminologyShopLabel, &s.TerminologyProductLabel,
-		&modulesJSON, &featuresJSON,
+		&modulesJSON, &featuresJSON, &s.Status,
 		&createdAt, &updatedAt,
 	)
 	if err == sql.ErrNoRows {
@@ -388,6 +455,40 @@ func (h *ShopHandler) GetShopMembers(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(members)
+}
+
+// ApproveShop handles PUT /api/admin/shops/{id}/approve
+// Updates shop status from pending to active
+func (h *ShopHandler) ApproveShop(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id := strings.TrimPrefix(r.URL.Path, "/api/admin/shops/")
+	id = strings.TrimSuffix(id, "/approve")
+	id = strings.TrimSpace(id)
+
+	if id == "" {
+		jsonError(w, "Shop ID is required", http.StatusBadRequest)
+		return
+	}
+
+	query := `UPDATE shops SET status = 'active', updated_at = NOW() WHERE id = $1 RETURNING id`
+	var updatedID string
+	err := h.DB.QueryRow(query, id).Scan(&updatedID)
+
+	if err == sql.ErrNoRows {
+		jsonError(w, "Shop not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		log.Printf("Error approving shop: %v", err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Shop approved successfully"})
 }
 
 // jsonError is a shared helper to write JSON error responses

@@ -99,17 +99,16 @@ body, .card, .navbar, .smart-sidebar, .mobile-dock, .dropdown-menu, .form-contro
 }
 
 .smart-sidebar .sidebar-footer {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
   border-top: 1px solid #dee2e6;
+  background-color: inherit;
+  z-index: 10;
 }
 
-/* Añadimos padding al contenedor de la lista para que el último item no quede oculto por el footer */
+/* El flex-grow-1 ya tiene overflow-auto en el componente, no necesita padding-bottom artificial ahora que el footer no es absolute */
 .smart-sidebar .flex-grow-1 {
-  /* La altura del footer es aprox 65px, damos un poco más de espacio */
-  padding-bottom: 75px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0; /* Necesario para que el overflow funcione en flexbox */
 }
 
 .smart-sidebar .sidebar-toggle-wrapper {

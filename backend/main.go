@@ -192,6 +192,7 @@ func main() {
 
 	// User registration and login routes / Rutas para registro y login de usuarios
 	mux.HandleFunc("/api/users", userHandler.RegisterUser)
+	mux.HandleFunc("/api/register-saas", userHandler.RegisterSaaS)
 	mux.HandleFunc("/api/login", userHandler.LoginUser)
 
 	// Shop routes / Rutas de tiendas
@@ -209,6 +210,33 @@ func main() {
 	})
 
 
+
+	// GET /api/admin/owners -> Listar todos los dueños (SuperAdmin)
+	mux.HandleFunc("/api/admin/owners", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			userHandler.GetOwners(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	// GET /api/admin/shops -> Listar todas las tiendas (SuperAdmin)
+	mux.HandleFunc("/api/admin/shops", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			shopHandler.GetAllShops(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	// PUT /api/admin/shops/{id}/approve -> Aprobar tienda pendiente (SuperAdmin)
+	mux.HandleFunc("/api/admin/shops/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/approve") && r.Method == http.MethodPut {
+			shopHandler.ApproveShop(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
 
 	// Consolidated /api/shops/{id}/... handler
 	// All sub-resources are dispatched here based on URL suffix

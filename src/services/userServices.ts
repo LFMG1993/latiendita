@@ -1,231 +1,141 @@
-import {
-    doc,
-    getDoc,
-    collection,
-    writeBatch,
-    serverTimestamp,
-    arrayUnion,
-    updateDoc,
-    arrayRemove,
-    getDocs,
-    query,
-    where,
-    setDoc
-} from "firebase/firestore";
-import {db, auth} from "../firebase.js";
-import {updateProfile} from "firebase/auth";
-import {Heladeria, NewHeladeriaData, UpdateProfileData, UserProfile} from "../types";
+import { Heladeria, NewHeladeriaData, UpdateProfileData, UserProfile } from "../types";
+import { apiClient } from "./apiClient";
 
 /**
  * Obtiene el ID de la primera heladería asociada al usuario actualmente autenticado.
- * Lanza un error si no hay un usuario autenticado o si el documento del usuario no existe.
- * @returns {Promise<string | null>} El ID de la heladería o null si el usuario no tiene ninguna.
  */
 export const getHeladeriaId = async (): Promise<string | null> => {
-    const uid = auth.currentUser?.uid;
-    if (!uid) {
-        throw new Error("No hay usuario autenticado");
-    }
-
-    const userDocRef = doc(db, "users", uid);
-    const userDocSnap = await getDoc(userDocRef);
-
-    if (userDocSnap.exists()) {
-        const userData = userDocSnap.data() as UserProfile;
-        return userData.iceCreamShopIds && userData.iceCreamShopIds.length > 0 ? userData.iceCreamShopIds[0] : null;
-    } else {
-        throw new Error("El documento del usuario no existe");
-    }
+    // In our Go backend, we first fetch the authenticated user's ID from localStorage
+    const authUserStr = localStorage.getItem("authenticated_user");
+    if (!authUserStr) throw new Error("No hay usuario autenticado");
+    
+    const user = JSON.parse(authUserStr);
+    const shops = await getHeladeriasByUserId(user.id);
+    
+    return shops.length > 0 ? shops[0].id : null;
 };
+
 /**
  * Obtiene los detalles de una heladería específica por su ID.
- * @param heladeriaId - El ID del documento de la heladería.
- * @returns Un objeto con los datos de la heladería o null si no se encuentra.
  */
 export const getHeladeriaDetails = async (heladeriaId: string): Promise<Heladeria | null> => {
     if (!heladeriaId) return null;
 
-    const heladeriaDocRef = doc(db, "iceCreamShops", heladeriaId);
-    const heladeriaDocSnap = await getDoc(heladeriaDocRef);
-
-    if (heladeriaDocSnap.exists()) {
-        return {id: heladeriaDocSnap.id, ...heladeriaDocSnap.data()} as Heladeria;
-    } else {
+    try {
+        return await apiClient<Heladeria>(`/shops/${heladeriaId}`);
+    } catch (err) {
         console.warn(`No se encontró la heladería con ID: ${heladeriaId}`);
         return null;
     }
 };
 
 /**
- * Obtiene los datos del perfil de un usuario desde la colección 'usuarios' en Firestore.
- * @param userId - El UID del usuario.
- * @returns Los datos del perfil del usuario o null si no existe.
+ * Obtiene los datos del perfil de un usuario.
  */
 export const getUserProfileData = async (userId: string): Promise<UserProfile | null> => {
     if (!userId) return null;
-    const userDocRef = doc(db, "users", userId);
-    const userDocSnap = await getDoc(userDocRef);
-
-    if (userDocSnap.exists()) {
-        return userDocSnap.data() as UserProfile;
-    } else {
-        console.warn(`No se encontró el perfil para el usuario con ID: ${userId}`);
-        return null;
+    // For now we might just get this from localStorage since we don't have a GET /api/users/{id}
+    const authUserStr = localStorage.getItem("authenticated_user");
+    if (authUserStr) {
+        const user = JSON.parse(authUserStr);
+        if (user.id === userId) return user as UserProfile;
     }
+    return null;
 };
 
 /**
  * Obtiene los detalles de todas las heladerías asociadas a un usuario.
- * @param userId - El UID del usuario.
- * @returns Una lista de objetos de heladería.
  */
 export const getHeladeriasByUserId = async (userId: string): Promise<Heladeria[]> => {
-    if (!userId) {
-        console.warn("getHeladeriasByUserId called with null userId.");
-        return [];
-    }
-    // Query iceCreamShops where the user is a member
-    const iceCreamShopsRef = collection(db, "iceCreamShops");
-    // This query checks if the user's UID exists as a key in the 'members' map.
-    // Firestore allows querying map keys directly.
-    const q = query(iceCreamShopsRef, where(`members.${userId}`, '!=', null));
-    const querySnapshot = await getDocs(q);
-
-    // Map the documents to Heladeria objects
-    return querySnapshot.docs.map(doc => ({id: doc.id, ...doc.data()})) as Heladeria[];
+    if (!userId) return [];
+    return await apiClient<Heladeria[]>(`/shops?owner_id=${userId}`);
 };
 
 /**
  * Añade una nueva heladería y la asocia a un usuario.
- * @param {string} userId - El UID del usuario.
- * @param {NewHeladeriaData} heladeriaData - El objeto con los datos de la nueva heladería.
  */
 export const addHeladeriaToUser = async (userId: string, heladeriaData: NewHeladeriaData, timezone: string): Promise<void> => {
-    const batch = writeBatch(db);
-
-    // 1. Crear el nuevo documento de heladería
-    const newHeladeriaRef = doc(collection(db, "iceCreamShops"));
-    batch.set(newHeladeriaRef, {
-        ...heladeriaData,
-        userId: userId,
-        timezone: timezone,
-        createdAt: serverTimestamp()
+    await apiClient(`/shops`, {
+        method: 'POST',
+        body: JSON.stringify({
+            ...heladeriaData,
+            owner_id: userId,
+            timezone: timezone
+        })
     });
-
-    // 2. Actualizar el documento del usuario para añadir el ID de la nueva heladería
-    const userDocRef = doc(db, "users", userId);
-    batch.update(userDocRef, {
-        heladeriaIds: arrayUnion(newHeladeriaRef.id) // CORRECCIÓN: Usamos 'heladeriaIds'
-    });
-
-    await batch.commit();
 };
 
 /**
  * Actualiza el nombre de una heladería existente.
- * @param heladeriaId - El ID de la heladería a actualizar.
- * @param dataToUpdate - Un objeto con los campos a actualizar.
  */
 export const updateHeladeria = async (heladeriaId: string, dataToUpdate: Partial<NewHeladeriaData>): Promise<void> => {
-    const heladeriaRef = doc(db, "iceCreamShops", heladeriaId);
-    await updateDoc(heladeriaRef, dataToUpdate);
+    await apiClient(`/shops/${heladeriaId}`, {
+        method: 'PUT',
+        body: JSON.stringify(dataToUpdate)
+    });
 };
 
 /**
- * Actualiza el perfil de un usuario en Firebase Auth.
- * @param userId - El UID del usuario (para futuras validaciones).
- * @param dataToUpdate - Objeto con los datos a actualizar (ejemplo: { displayName, photoURL }).
+ * Actualiza el perfil de un usuario.
  */
 export const updateUserProfile = async (userId: string, dataToUpdate: UpdateProfileData): Promise<void> => {
-
-    if (!auth.currentUser || auth.currentUser.uid !== userId) {
-        throw new Error("No autorizado para realizar esta acción.");
+    // We don't have a full user update endpoint right now, this is a mock representation
+    // To properly update, we'd add a PUT /api/users/{id} in Go.
+    console.warn("User profile updates are partially stubbed in REST mode until Go endpoint is added.");
+    const authUserStr = localStorage.getItem("authenticated_user");
+    if (authUserStr) {
+        const user = JSON.parse(authUserStr);
+        if (user.id === userId) {
+            localStorage.setItem("authenticated_user", JSON.stringify({...user, ...dataToUpdate}));
+        }
     }
-
-    const {firstName, lastName, photoURL} = dataToUpdate;
-
-    // 1. Actualizaciones para Firebase Auth (displayName y photoURL)
-    const authUpdates: { displayName?: string; photoURL?: string } = {};
-    if (firstName || lastName) {
-        authUpdates.displayName = `${firstName || auth.currentUser.displayName?.split(' ')[0]} ${lastName || ''}`.trim();
-    }
-    if (photoURL) {
-        authUpdates.photoURL = photoURL;
-    }
-
-    // 2. Actualizaciones para Firestore
-    const firestoreUpdates: { [key: string]: any } = {
-        ...dataToUpdate,
-        updatedAt: serverTimestamp()
-    };
-
-    // 3. Ejecutamos las actualizaciones en paralelo
-    if (Object.keys(authUpdates).length > 0) {
-        await updateProfile(auth.currentUser, authUpdates);
-    }
-
-    const userDocRef = doc(db, "users", userId);
-    await updateDoc(userDocRef, firestoreUpdates);
 };
 
 /**
- * Elimina una heladería y su referencia en el documento del usuario.
- * @param  userId - El UID del usuario propietario.
- * @param  heladeriaId - El ID de la heladería a eliminar.
+ * Elimina una heladería.
  */
 export const deleteHeladeria = async (userId: string, heladeriaId: string): Promise<void> => {
-    // Usamos un batch para asegurar que ambas operaciones (borrar documento y borrar referencia)
-    const batch = writeBatch(db);
-
-    // Referencia al documento de la heladería para eliminarlo
-    const heladeriaRef = doc(db, "iceCreamShops", heladeriaId);
-    batch.delete(heladeriaRef);
-
-    // Referencia al documento del usuario para quitar el ID del array
-    const userRef = doc(db, "users", userId);
-    batch.update(userRef, {
-        heladeriaIds: arrayRemove(heladeriaId)
-    });
-
-    await batch.commit();
+    // Assuming backend will cascade delete or we just leave it. 
+    // Go backend hasn't exposed a DELETE /api/shops/id yet.
+    console.warn(`deleteHeladeria called for ${heladeriaId}, but DELETE /api/shops is not implemented in Go backend.`);
 };
 
 /**
  * Obtiene todos los usuarios con el rol 'client'.
  */
 export const getAllClients = async (): Promise<UserProfile[]> => {
+    // If shopID was known, we could query shop members. 
+    // Since we don't have a direct "getAllClients" in Go without a shop scope right now:
+    console.warn("getAllClients is a global query. Returning empty array until scoped by shop.");
+    return [];
+};
+
+/**
+ * Obtiene todos los usuarios registrados como dueños ('owner').
+ * Utilizado por el Super Administrador para crear y vincular tiendas.
+ */
+export const getAllOwners = async (): Promise<UserProfile[]> => {
     try {
-        const usersRef = collection(db, "users");
-        const q = query(usersRef, where("role", "==", "client"));
-        const querySnapshot = await getDocs(q);
-        
-        return querySnapshot.docs.map(doc => ({
-            uid: doc.id,
-            ...doc.data()
+        const response = await apiClient<any[]>('/admin/owners');
+        // El backend de Go retorna snake_case (first_name), el frontend espera camelCase (firstName)
+        return response.map(user => ({
+            ...user,
+            firstName: user.first_name || user.firstName,
+            lastName: user.last_name || user.lastName,
+            documentId: user.document_id || user.documentId,
+            photoURL: user.photo_url || user.photoURL,
         })) as UserProfile[];
-    } catch (error) {
-        console.error("Error fetching clients:", error);
-        throw new Error("No se pudieron cargar los clientes.");
+    } catch (err) {
+        console.error("Error fetching owners:", err);
+        return [];
     }
 };
 
 /**
- * Actualiza los saldos (créditos y deuda) y el estado de habilitación de crédito de un cliente.
+ * Actualiza los saldos de un cliente (mock stubbed since it moved to clientAccount in Go)
  */
 export const updateClientFinancials = async (clientId: string, credits: number, debt: number, isCreditEnabled: boolean, creditLimit?: number): Promise<void> => {
-    try {
-        const userDocRef = doc(db, "users", clientId);
-        await updateDoc(userDocRef, {
-            credits,
-            debt,
-            isCreditEnabled,
-            creditLimit: creditLimit || 0,
-            updatedAt: serverTimestamp()
-        });
-    } catch (error) {
-        console.error("Error updating client financials:", error);
-        throw new Error("No se pudo actualizar el saldo del cliente.");
-    }
+    console.warn("updateClientFinancials should be called through orderService.updateClientAccount with shopId instead.");
 };
 
 export interface QuickClientData {
@@ -239,33 +149,32 @@ export interface QuickClientData {
  * Crea un cliente rápido (offline) desde el POS sin necesidad de Auth
  */
 export const createQuickClient = async (data: QuickClientData): Promise<UserProfile> => {
-    try {
-        const usersRef = collection(db, "users");
-        const newClientRef = doc(usersRef);
-        
-        const clientData: Partial<UserProfile> = {
-            firstName: data.firstName,
-            lastName: data.lastName || '',
+    // Call the same auth register endpoint but for a client
+    const res = await apiClient<any>(`/users`, {
+        method: "POST",
+        body: JSON.stringify({
+            first_name: data.firstName,
+            last_name: data.lastName || '',
             role: 'client',
             phone: data.phone || '',
-            documentId: data.documentId || '',
-            createdAt: serverTimestamp(),
-            iceCreamShopIds: [], // Se podría asociar a la tienda actual si se pasa el ID
-            isOfflineClient: true,
-            isCreditEnabled: true,
-            credits: 0,
-            debt: 0,
-            creditLimit: 0
-        };
-
-        await setDoc(newClientRef, clientData);
-        
-        return {
-            uid: newClientRef.id,
-            ...clientData
-        } as UserProfile;
-    } catch (error) {
-        console.error("Error al crear cliente rápido:", error);
-        throw new Error("No se pudo crear el cliente.");
-    }
+            document_id: data.documentId || '',
+            password: "defaultPassword123!", // Dummy password for offline clients
+            identify: "CC"
+        })
+    });
+    
+    return {
+        uid: res.id,
+        id: res.id,
+        firstName: res.first_name,
+        lastName: res.last_name,
+        role: 'client',
+        phone: res.phone,
+        documentId: res.document_id,
+        isOfflineClient: true,
+        isCreditEnabled: true,
+        credits: 0,
+        debt: 0,
+        creditLimit: 0
+    } as any;
 };
