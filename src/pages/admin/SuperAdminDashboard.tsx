@@ -21,8 +21,8 @@ export const SuperAdminDashboard: FC = () => {
     
     const {showToast} = useToast();
 
-    const fetchShopsAndOwners = async () => {
-        setLoading(true);
+    const fetchShopsAndOwners = async (silent = false) => {
+        if (!silent) setLoading(true);
         try {
             const [shopsData, ownersData] = await Promise.all([
                 getAllShops(),
@@ -30,10 +30,17 @@ export const SuperAdminDashboard: FC = () => {
             ]);
             setShops(shopsData);
             setOwners(ownersData);
+            
+            // Sincronizar el shop seleccionado si el modal está abierto para que no parpadee
+            setSelectedShop(prev => {
+                if (!prev) return null;
+                const updated = shopsData.find(s => s.id === prev.id);
+                return updated || prev;
+            });
         } catch (error) {
             console.error("Error fetching data:", error);
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     };
 
@@ -174,7 +181,7 @@ export const SuperAdminDashboard: FC = () => {
                 show={showManager} 
                 onClose={handleCloseManager} 
                 shop={selectedShop} 
-                onUpdate={fetchShopsAndOwners} 
+                onUpdate={() => fetchShopsAndOwners(true)} 
             />
 
             {/* Modal para Crear Tienda */}

@@ -364,10 +364,10 @@ func (h *ShopHandler) UpdateShop(w http.ResponseWriter, r *http.Request) {
 	// Handle optional JSON objects
 	var modulesArg, featuresArg interface{}
 	if shop.Modules != nil {
-		modulesArg = shop.Modules
+		modulesArg = string(shop.Modules)
 	}
 	if shop.Features != nil {
-		featuresArg = shop.Features
+		featuresArg = string(shop.Features)
 	}
 
 	err := h.DB.QueryRow(query,
