@@ -147,6 +147,26 @@ func (h *OrderHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
 		o.UpdatedAt = &updatedAt
 		orders = append(orders, o)
 	}
+
+	// Fetch items
+	for i := range orders {
+		itemRows, err := h.DB.Query(`SELECT id, order_id, product_id, product_name, quantity, price_at_purchase FROM order_items WHERE order_id = $1`, orders[i].ID)
+		if err == nil {
+			var items []models.OrderItem
+			for itemRows.Next() {
+				var item models.OrderItem
+				if err := itemRows.Scan(&item.ID, &item.OrderID, &item.ProductID, &item.ProductName, &item.Quantity, &item.PriceAtPurchase); err == nil {
+					items = append(items, item)
+				}
+			}
+			itemRows.Close()
+			if items == nil {
+				items = []models.OrderItem{}
+			}
+			orders[i].Items = items
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(orders)
 }
@@ -191,6 +211,26 @@ func (h *OrderHandler) GetClientOrders(w http.ResponseWriter, r *http.Request) {
 		o.UpdatedAt = &updatedAt
 		orders = append(orders, o)
 	}
+
+	// Fetch items
+	for i := range orders {
+		itemRows, err := h.DB.Query(`SELECT id, order_id, product_id, product_name, quantity, price_at_purchase FROM order_items WHERE order_id = $1`, orders[i].ID)
+		if err == nil {
+			var items []models.OrderItem
+			for itemRows.Next() {
+				var item models.OrderItem
+				if err := itemRows.Scan(&item.ID, &item.OrderID, &item.ProductID, &item.ProductName, &item.Quantity, &item.PriceAtPurchase); err == nil {
+					items = append(items, item)
+				}
+			}
+			itemRows.Close()
+			if items == nil {
+				items = []models.OrderItem{}
+			}
+			orders[i].Items = items
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(orders)
 }
@@ -281,6 +321,43 @@ func (h *OrderHandler) GetDebtPaymentRequests(w http.ResponseWriter, r *http.Req
 	query += " ORDER BY created_at DESC"
 
 	rows, err := h.DB.Query(query, args...)
+	if err != nil {
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	requests := []models.DebtPaymentRequest{}
+	for rows.Next() {
+		var req models.DebtPaymentRequest
+		var createdAt, updatedAt time.Time
+		if err := rows.Scan(
+			&req.ID, &req.ClientID, &req.ClientName, &req.ClientPhone, &req.ShopID,
+			&req.Amount, &req.PaymentMethodID, &req.PaymentMethodName, &req.VoucherNumber,
+			&req.Status, &req.Notes, &createdAt, &updatedAt,
+		); err != nil {
+			continue
+		}
+		req.CreatedAt = &createdAt
+		req.UpdatedAt = &updatedAt
+		requests = append(requests, req)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(requests)
+}
+
+// GetClientDebtPayments handles GET /api/clients/{client_id}/debt-payments
+func (h *OrderHandler) GetClientDebtPayments(w http.ResponseWriter, r *http.Request) {
+	clientID := strings.TrimPrefix(r.URL.Path, "/api/clients/")
+	clientID = strings.TrimSuffix(clientID, "/debt-payments")
+
+	query := `
+		SELECT id, client_id, client_name, client_phone, shop_id, amount, payment_method_id,
+		       payment_method_name, voucher_number, status, notes, created_at, updated_at
+		FROM debt_payment_requests WHERE client_id = $1
+		ORDER BY created_at DESC
+	`
+	rows, err := h.DB.Query(query, clientID)
 	if err != nil {
 		jsonError(w, "Internal server error", http.StatusInternalServerError)
 		return

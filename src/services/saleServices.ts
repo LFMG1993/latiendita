@@ -8,14 +8,21 @@ const mapSalePaymentToBackend = (p: any) => ({
     type: p.type,
 });
 
-const mapSaleItemToBackend = (i: any) => ({
-    product_id: i.productId || null,
-    product_name: i.productName || '',
-    quantity: Number(i.quantity),
-    unit_price: Number(i.unitPrice),
-    is_promotion: !!i.isPromotion,
-    promotion_id: i.promotionId || null,
-});
+const mapSaleItemToBackend = (i: any) => {
+    let finalProductId = i.productId || null;
+    if (finalProductId && typeof finalProductId === 'string' && finalProductId.startsWith('PROMO::')) {
+        finalProductId = null;
+    }
+    
+    return {
+        product_id: finalProductId,
+        product_name: i.productName || '',
+        quantity: Number(i.quantity),
+        unit_price: Number(i.unitPrice),
+        is_promotion: !!i.isPromotion,
+        promotion_id: i.promotionId || null,
+    };
+};
 
 const mapSaleToBackend = (s: NewSaleData) => ({
     session_id: s.sessionId || null,
@@ -95,4 +102,20 @@ export const getSalesBySessionId = async (iceCreamShopId: string, sessionId: str
     return (sales || [])
         .filter(s => s.session_id === sessionId)
         .map(mapSaleToFrontend);
+};
+
+/**
+ * Obtiene todas las ventas POS asociadas a un cliente específico.
+ */
+export const getSalesByClientId = async (shopId: string, clientId: string): Promise<Sale[]> => {
+    const sales = await apiClient<any[]>(`/shops/${shopId}/sales?client_id=${clientId}`);
+    return (sales || []).map(mapSaleToFrontend);
+};
+
+/**
+ * Obtiene todas las ventas POS asociadas a un cliente en todas las tiendas.
+ */
+export const getAllClientSales = async (clientId: string): Promise<Sale[]> => {
+    const sales = await apiClient<any[]>(`/clients/${clientId}/sales`);
+    return (sales || []).map(mapSaleToFrontend);
 };

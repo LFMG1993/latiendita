@@ -93,7 +93,7 @@ const PointOfSalePage: FC = () => {
                     getActivePaymentMethods(heladeriaId),
                     getOpenCashSession(heladeriaId),
                     getActivePromotionsForToday(heladeriaId, today),
-                    getAllClients()
+                    getAllClients(heladeriaId)
                 ]);
                 setProducts(productsData);
                 setIngredients(ingredientsData);
@@ -170,7 +170,7 @@ const PointOfSalePage: FC = () => {
 
         // Determinar la disponibilidad de cada producto
         return products.map(product => {
-            const unitsPerIngredient = product.recipe.map(recipeItem => {
+            const unitsPerIngredient = (product.recipe || []).map(recipeItem => {
                 if (recipeItem.ingredientId.startsWith('CATEGORY::')) return Infinity;
 
                 const ingredient = ingredientsMap.get(recipeItem.ingredientId);
@@ -190,7 +190,7 @@ const PointOfSalePage: FC = () => {
 
     const addProductToOrder = (product: Product, variableIngredients: IngredientUsage[]) => {
         if (!activeOrderId) return;
-        const ingredientsUsed: IngredientUsage[] = product.recipe
+        const ingredientsUsed: IngredientUsage[] = (product.recipe || [])
             .filter(item => !item.ingredientId.startsWith('CATEGORY::'))
             .map(item => ({ingredientId: item.ingredientId, quantity: item.quantity}));
 
@@ -218,7 +218,7 @@ const PointOfSalePage: FC = () => {
     };
 
     const handleProductSelect = (product: Product) => {
-        const variableItems = product.recipe
+        const variableItems = (product.recipe || [])
             .filter(item => item.ingredientId.startsWith('CATEGORY::'))
             .map(item => ({ingredientId: item.ingredientId, quantity: item.quantity}));
 

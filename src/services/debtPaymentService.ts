@@ -19,12 +19,15 @@ export const getPendingDebtPayments = async (shopId: string): Promise<DebtPaymen
 };
 
 export const getClientDebtPayments = async (clientId: string): Promise<DebtPaymentRequest[]> => {
-    // In Go, debt payments are fetched by shop. The frontend currently needs them by client.
-    // If the frontend has multiple shops, it would need to fetch all and filter.
-    // Assuming the user is in the context of a shop:
-    console.warn("Fetching all debt payments globally by client. This may fail if shop_id is required.");
-    // This is a dummy implementation until the Go API supports fetching by client globally
-    return [];
+    if (!clientId) return [];
+    
+    // Call the new global Go endpoint to fetch all debt payments across all shops for the client
+    const requests = await apiClient<DebtPaymentRequest[]>(`/clients/${clientId}/debt-payments`);
+    return requests.map(r => ({
+        ...r,
+        createdAt: { toMillis: () => new Date(r.createdAt as any).getTime() } as any,
+        updatedAt: { toMillis: () => new Date(r.updatedAt as any).getTime() } as any
+    }));
 };
 
 export const approveDebtPayment = async (requestId: string, clientId: string, amount: number): Promise<number> => {

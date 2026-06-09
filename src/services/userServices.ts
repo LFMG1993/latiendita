@@ -101,13 +101,18 @@ export const deleteHeladeria = async (userId: string, heladeriaId: string): Prom
 };
 
 /**
- * Obtiene todos los usuarios con el rol 'client'.
+ * Obtiene todos los usuarios inscritos en una tienda específica.
  */
-export const getAllClients = async (): Promise<UserProfile[]> => {
-    // If shopID was known, we could query shop members. 
-    // Since we don't have a direct "getAllClients" in Go without a shop scope right now:
-    console.warn("getAllClients is a global query. Returning empty array until scoped by shop.");
-    return [];
+export const getAllClients = async (shopId?: string): Promise<UserProfile[]> => {
+    if (!shopId) {
+        console.warn("getAllClients requires a shopId. Returning empty array.");
+        return [];
+    }
+    const clients = await apiClient<UserProfile[]>(`/shops/${shopId}/clients`);
+    return clients.map((c: any) => ({
+        ...c,
+        createdAt: c.createdAt ? { toDate: () => new Date(c.createdAt) } : undefined
+    })) as UserProfile[];
 };
 
 /**
@@ -134,8 +139,20 @@ export const getAllOwners = async (): Promise<UserProfile[]> => {
 /**
  * Actualiza los saldos de un cliente (mock stubbed since it moved to clientAccount in Go)
  */
-export const updateClientFinancials = async (clientId: string, credits: number, debt: number, isCreditEnabled: boolean, creditLimit?: number): Promise<void> => {
-    console.warn("updateClientFinancials should be called through orderService.updateClientAccount with shopId instead.");
+export const updateClientFinancials = async (shopId: string, clientId: string, credits: number, debt: number, isCreditEnabled: boolean, creditLimit?: number): Promise<void> => {
+    if (!shopId) {
+        console.warn("updateClientFinancials requires a shopId");
+        return;
+    }
+    await apiClient(`/shops/${shopId}/clients/${clientId}/account`, {
+        method: 'PUT',
+        body: JSON.stringify({
+            credits: credits,
+            debt: debt,
+            is_credit_enabled: isCreditEnabled,
+            credit_limit: creditLimit || 0
+        })
+    });
 };
 
 export interface QuickClientData {

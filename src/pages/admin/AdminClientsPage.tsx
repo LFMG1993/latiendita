@@ -3,6 +3,7 @@ import {useToast} from "../../context/ToastContext";
 import {getAllClients, updateClientFinancials} from '../../services/userServices';
 import {useAuthStore} from '../../store/authStore';
 import {getClientOrders} from '../../services/orderService';
+import {getSalesByClientId} from '../../services/saleServices';
 import {UserProfile} from '../../types/user.types';
 import {Order} from '../../types/order.types';
 import FullScreenLoader from '../../components/general/FullScreenLoader';
@@ -32,8 +33,10 @@ const AdminClientsPage: FC = () => {
 
     const loadData = async () => {
         try {
-            const data = await getAllClients();
-            setClients(data);
+            if (activeIceCreamShopId) {
+                const data = await getAllClients(activeIceCreamShopId);
+                setClients(data);
+            }
         } catch (err) {
             console.error(err);
         } finally {
@@ -42,8 +45,10 @@ const AdminClientsPage: FC = () => {
     };
 
     useEffect(() => {
-        loadData();
-    }, []);
+        if (activeIceCreamShopId) {
+            loadData();
+        }
+    }, [activeIceCreamShopId]);
 
     const handleViewDetail = async (client: UserProfile) => {
         setSelectedClient(client);
@@ -55,8 +60,37 @@ const AdminClientsPage: FC = () => {
         setShowDetail(true);
         try {
             if (client.uid && activeIceCreamShopId) {
-                const orders = await getClientOrders(client.uid, activeIceCreamShopId);
-                setClientOrders(orders);
+                const [orders, sales] = await Promise.all([
+                    getClientOrders(client.uid, activeIceCreamShopId),
+                    getSalesByClientId(activeIceCreamShopId, client.uid)
+                ]);
+
+                // Map POS sales to Order format for combined display
+                const mappedSales: Order[] = sales.map(sale => ({
+                    id: sale.id,
+                    shopId: activeIceCreamShopId,
+                    clientId: client.uid!,
+                    clientName: sale.clientName,
+                    items: sale.items.map(i => ({ 
+                        product: { name: i.productName }, 
+                        quantity: i.quantity, 
+                        priceAtPurchase: i.unitPrice 
+                    })),
+                    totalAmount: sale.total,
+                    totalItems: sale.items.reduce((sum, i) => sum + i.quantity, 0),
+                    paymentMethod: sale.payments && sale.payments.length > 0 ? sale.payments[0].type : 'cash',
+                    status: 'delivered', // POS sales are always completed
+                    createdAt: sale.createdAt
+                } as any)); // Using any to bypass strict type checking since we only use these fields for display
+
+                // Sort combined history from newest to oldest
+                const combinedHistory = [...orders, ...mappedSales].sort((a, b) => {
+                    const dateA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+                    const dateB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+                    return dateB - dateA;
+                });
+                
+                setClientOrders(combinedHistory);
             }
         } catch (err) {
             console.error(err);
@@ -66,10 +100,10 @@ const AdminClientsPage: FC = () => {
     };
 
     const handleUpdateSaldos = async () => {
-        if (!selectedClient?.uid) return;
+        if (!selectedClient?.uid || !activeIceCreamShopId) return;
         setUpdatingSaldos(true);
         try {
-            await updateClientFinancials(selectedClient.uid, tempCredits, tempDebt, tempIsCreditEnabled, tempCreditLimit);
+            await updateClientFinancials(activeIceCreamShopId, selectedClient.uid, tempCredits, tempDebt, tempIsCreditEnabled, tempCreditLimit);
             // Actualizar localmente
             setClients(prev => prev.map(c => c.uid === selectedClient.uid ? {...c, credits: tempCredits, debt: tempDebt, isCreditEnabled: tempIsCreditEnabled, creditLimit: tempCreditLimit} : c));
             setSelectedClient(prev => prev ? {...prev, credits: tempCredits, debt: tempDebt, isCreditEnabled: tempIsCreditEnabled, creditLimit: tempCreditLimit} : null);
@@ -136,8 +170,12 @@ const AdminClientsPage: FC = () => {
                                         </div>
                                         <div className="col-6">
                                             <div className="bg-info bg-opacity-10 rounded p-2">
-                                                <small className="text-muted d-block small-label text-uppercase">Límite</small>
-                                                <span className="fw-bold text-info">{client.creditLimit ? formatCurrency(client.creditLimit) : 'Sin Límite'}</span>
+                                                <small className="text-muted d-block small-label text-uppercase">Disponible</small>
+                                                <span className="fw-bold text-info">
+                                                    {client.isCreditEnabled 
+                                                        ? (client.creditLimit ? formatCurrency(Math.max(0, client.creditLimit - (client.debt || 0))) : 'Ilimitado') 
+                                                        : 'Sin Crédito'}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>

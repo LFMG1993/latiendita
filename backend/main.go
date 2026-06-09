@@ -505,6 +505,15 @@ func main() {
 				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			}
 
+		// Clients
+		case strings.HasSuffix(path, "/clients"):
+			switch r.Method {
+			case http.MethodGet:
+				shopHandler.GetClientsByShop(w, r)
+			default:
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			}
+
 		// Client Account: /api/shops/{shop_id}/clients/{client_id}/account
 		case strings.HasSuffix(path, "/account"):
 			switch r.Method {
@@ -549,9 +558,17 @@ func main() {
 		}
 	})
 	mux.HandleFunc("/api/clients/", func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasSuffix(r.URL.Path, "/orders") && r.Method == http.MethodGet {
+		path := r.URL.Path
+		switch {
+		case strings.HasSuffix(path, "/orders") && r.Method == http.MethodGet:
 			orderHandler.GetClientOrders(w, r)
-		} else {
+		case strings.HasSuffix(path, "/shops") && r.Method == http.MethodGet:
+			shopHandler.GetShopsByClient(w, r)
+		case strings.HasSuffix(path, "/debt-payments") && r.Method == http.MethodGet:
+			orderHandler.GetClientDebtPayments(w, r)
+		case strings.HasSuffix(path, "/sales") && r.Method == http.MethodGet:
+			saleHandler.GetClientSales(w, r)
+		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
