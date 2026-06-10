@@ -200,7 +200,8 @@ const ProductShowcaseContent: FC<{targetShopId: string | null, DEFAULT_SHOP_ID: 
                     })),
                     totalAmount: totalAmount,
                     totalItems: totalItems,
-                    paymentMethod: paymentMethod
+                    paymentMethod: paymentMethod,
+                    pendingDebt: paymentMethod === 'credit' ? totalAmount : 0
                 };
 
                 // 2. Crear pedido - Sanitizamos los datos para evitar errores de Firebase con 'undefined'

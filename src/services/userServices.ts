@@ -108,9 +108,17 @@ export const getAllClients = async (shopId?: string): Promise<UserProfile[]> => 
         console.warn("getAllClients requires a shopId. Returning empty array.");
         return [];
     }
-    const clients = await apiClient<UserProfile[]>(`/shops/${shopId}/clients`);
+    const clients = await apiClient<any[]>(`/shops/${shopId}/clients`);
     return clients.map((c: any) => ({
         ...c,
+        uid: c.uid || c.id,
+        firstName: c.firstName || c.first_name || '',
+        lastName: c.lastName || c.last_name || '',
+        documentId: c.documentId || c.document_id,
+        isCreditEnabled: c.isCreditEnabled ?? !!c.is_credit_enabled,
+        creditLimit: c.creditLimit ?? c.credit_limit ?? 0,
+        credits: c.credits ?? 0,
+        debt: c.debt ?? 0,
         createdAt: c.createdAt ? { toDate: () => new Date(c.createdAt) } : undefined
     })) as UserProfile[];
 };

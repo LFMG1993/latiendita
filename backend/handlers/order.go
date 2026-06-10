@@ -79,19 +79,12 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		order.Items[i].OrderID = order.ID
 	}
 
-	// Handle credit usage and debt
+	// Handle credit usage
 	if order.UsedCredits > 0 {
 		tx.Exec(`
 			UPDATE client_shop_accounts SET credits = GREATEST(0, credits - $1), updated_at = NOW()
 			WHERE shop_id = $2 AND client_id = $3
 		`, order.UsedCredits, shopID, order.ClientID)
-	}
-	if order.PendingDebt > 0 {
-		tx.Exec(`
-			INSERT INTO client_shop_accounts (shop_id, client_id, debt)
-			VALUES ($1, $2, $3)
-			ON CONFLICT (shop_id, client_id) DO UPDATE SET debt = client_shop_accounts.debt + $3, updated_at = NOW()
-		`, shopID, order.ClientID, order.PendingDebt)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -248,11 +241,63 @@ func (h *OrderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	_, err := h.DB.Exec(`UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2`, body.Status, id)
+	tx, err := h.DB.Begin()
 	if err != nil {
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	// Retrieve order details to check status transition and financial info
+	var currentStatus string
+	var paymentMethod string
+	var pendingDebt float64
+	var shopID string
+	var clientID string
+
+	err = tx.QueryRow(`
+		SELECT status, payment_method, pending_debt, shop_id, client_id 
+		FROM orders WHERE id = $1 FOR UPDATE
+	`, id).Scan(&currentStatus, &paymentMethod, &pendingDebt, &shopID, &clientID)
+	if err == sql.ErrNoRows {
+		jsonError(w, "Order not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		log.Printf("Error querying order details: %v", err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Update order status
+	_, err = tx.Exec(`UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2`, body.Status, id)
+	if err != nil {
+		log.Printf("Error updating order status: %v", err)
 		jsonError(w, "Error updating order status", http.StatusInternalServerError)
 		return
 	}
+
+	// If transitioning to delivered and not already delivered, apply pending debt
+	if body.Status == "delivered" && currentStatus != "delivered" {
+		if paymentMethod == "credit" && pendingDebt > 0 {
+			_, err = tx.Exec(`
+				INSERT INTO client_shop_accounts (shop_id, client_id, debt)
+				VALUES ($1, $2, $3)
+				ON CONFLICT (shop_id, client_id) DO UPDATE SET debt = client_shop_accounts.debt + $3, updated_at = NOW()
+			`, shopID, clientID, pendingDebt)
+			if err != nil {
+				log.Printf("Error updating client debt account: %v", err)
+				jsonError(w, "Error updating client debt account", http.StatusInternalServerError)
+				return
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		log.Printf("Error committing transaction: %v", err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"id": id, "status": body.Status})
 }

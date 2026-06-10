@@ -171,6 +171,27 @@ const ClientDashboardPage: FC = () => {
 
                     setAvailableShops(shopsWithStatus);
                     setMasterProducts(masterData);
+
+                    // Si el cliente tiene al menos una tienda inscrita, usar la primera para cargar financials
+                    if (shops.length > 0) {
+                        const firstShopId = shops[0].id;
+                        setCurrentShopId(firstShopId);
+                        localStorage.setItem('last_shop_id', firstShopId);
+                        try {
+                            const [finData, productsData, methodsData, openSession] = await Promise.all([
+                                getClientFinancials(firstShopId, user.uid),
+                                getPublicProducts(firstShopId),
+                                getActivePaymentMethods(firstShopId),
+                                getOpenCashSession(firstShopId)
+                            ]);
+                            setFinancials(finData);
+                            setProducts(productsData);
+                            setPaymentMethodsList(methodsData.filter(m => m.type !== 'credit'));
+                            setIsShopOpen(!!openSession);
+                        } catch (e) {
+                            console.error('Error cargando datos de tienda por defecto:', e);
+                        }
+                    }
                 }
             } catch (err) {
                 console.error("Error cargando dashboard:", err);
@@ -348,6 +369,7 @@ const ClientDashboardPage: FC = () => {
                 totalAmount: cartTotal,
                 totalItems: cart.reduce((sum, i) => sum + i.quantity, 0),
                 paymentMethod: paymentMethod,
+                pendingDebt: paymentMethod === 'credit' ? cartTotal : 0,
                 note: paymentMethod === 'electronic' ? `Pago mediante: ${paymentMethodsList.find(m => m.id === selectedElectronicMethodId)?.name || 'Transferencia'}` : ''
             };
 

@@ -88,8 +88,8 @@ export const getShopOrders = async (shopId: string): Promise<Order[]> => {
 };
 
 export const updateOrderStatus = async (orderId: string, status: OrderStatus): Promise<void> => {
-    // The Go backend automatically handled the credit/debt deduction on creation, 
-    // so we don't need to recalculate it here during delivery status change.
+    // The Go backend automatically handles updating the client's debt account when
+    // the order status transitions to 'delivered', so no extra service calls are needed here.
     await apiClient(`/orders/${orderId}/status`, {
         method: 'PUT',
         body: JSON.stringify({ status })
