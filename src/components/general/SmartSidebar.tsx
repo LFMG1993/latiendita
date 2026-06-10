@@ -86,8 +86,6 @@ const SmartSidebar: FC<SmartSidebarProps> = ({isExpanded, setIsExpanded}) => {
     return (
         <nav
             id="sidebarMenu"
-            onMouseEnter={() => setIsExpanded(true)}
-            onMouseLeave={() => setIsExpanded(false)}
             className={`smart-sidebar sidebar d-flex flex-column ${isExpanded ? 'sidebar-expanded' : ''}`}
         >
             <div className="d-flex align-items-center justify-content-center py-3 border-bottom border-secondary-subtle">
