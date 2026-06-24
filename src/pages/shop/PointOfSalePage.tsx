@@ -88,12 +88,21 @@ const PointOfSalePage: FC = () => {
             try {
                 const today = new Date().getDay();
                 const [productsData, ingredientsData, paymentMethodsData, sessionData, promotionsData, clientsData] = await Promise.all([
+<<<<<<< HEAD:src/pages/shop/PointOfSalePage.tsx
                     getProducts(shopId),
                     getIngredients(shopId),
                     getActivePaymentMethods(shopId),
                     getOpenCashSession(shopId),
                     getActivePromotionsForToday(shopId, today),
                     getAllClients()
+=======
+                    getProducts(heladeriaId),
+                    getIngredients(heladeriaId),
+                    getActivePaymentMethods(heladeriaId),
+                    getOpenCashSession(heladeriaId),
+                    getActivePromotionsForToday(heladeriaId, today),
+                    getAllClients(heladeriaId)
+>>>>>>> refs/remotes/origin/main:src/pages/admin/PointOfSalePage.tsx
                 ]);
                 setProducts(productsData);
                 setIngredients(ingredientsData);
@@ -170,7 +179,7 @@ const PointOfSalePage: FC = () => {
 
         // Determinar la disponibilidad de cada producto
         return products.map(product => {
-            const unitsPerIngredient = product.recipe.map(recipeItem => {
+            const unitsPerIngredient = (product.recipe || []).map(recipeItem => {
                 if (recipeItem.ingredientId.startsWith('CATEGORY::')) return Infinity;
 
                 const ingredient = ingredientsMap.get(recipeItem.ingredientId);
@@ -190,7 +199,7 @@ const PointOfSalePage: FC = () => {
 
     const addProductToOrder = (product: Product, variableIngredients: IngredientUsage[]) => {
         if (!activeOrderId) return;
-        const ingredientsUsed: IngredientUsage[] = product.recipe
+        const ingredientsUsed: IngredientUsage[] = (product.recipe || [])
             .filter(item => !item.ingredientId.startsWith('CATEGORY::'))
             .map(item => ({ingredientId: item.ingredientId, quantity: item.quantity}));
 
@@ -218,7 +227,7 @@ const PointOfSalePage: FC = () => {
     };
 
     const handleProductSelect = (product: Product) => {
-        const variableItems = product.recipe
+        const variableItems = (product.recipe || [])
             .filter(item => item.ingredientId.startsWith('CATEGORY::'))
             .map(item => ({ingredientId: item.ingredientId, quantity: item.quantity}));
 

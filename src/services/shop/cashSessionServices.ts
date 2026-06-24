@@ -1,20 +1,17 @@
-import { NewCashSessionData, CashSession, Purchase, Expense } from "../../types";
+import { NewCashSessionData, CashSession, Purchase, Expense } from "../types";
 import { getSalesByDateRange } from "./saleServices";
-import { apiClient } from "../shared/apiClient";
+import { apiClient } from "./apiClient";
 
 /**
  * Busca si hay una sesión de caja abierta actualmente en la heladería.
  */
 export const getOpenCashSession = async (shopId: string): Promise<CashSession | null> => {
     try {
-        const session = await apiClient<CashSession>(`/shops/${shopId}/cash-sessions/open`);
+        const session = await apiClient<CashSession>(`/shops/${heladeriaId}/cash-sessions/open`);
         // If the backend returns null/empty obj it means no session is open
         if (!session || !session.id) return null;
-        
-        return {
-            ...session,
-            startTime: { toDate: () => new Date(session.startTime as any) }
-        } as any;
+
+        return mapSessionToFrontend(session);
     } catch {
         return null;
     }
@@ -27,9 +24,9 @@ export const startCashSession = async (shopId: string, sessionData: NewCashSessi
     await apiClient(`/shops/${shopId}/cash-sessions`, {
         method: 'POST',
         body: JSON.stringify({
-            employeeId: sessionData.employeeId,
-            employeeName: sessionData.employeeName,
-            openingBalance: sessionData.openingBalance
+            employee_id: sessionData.employeeId,
+            employee_name: sessionData.employeeName,
+            opening_balance: sessionData.openingBalance
         })
     });
 };
@@ -38,23 +35,23 @@ export const startCashSession = async (shopId: string, sessionData: NewCashSessi
  * Cierra una sesión de caja, calculando todos los totales.
  */
 export const closeCashSession = async (
-    shopId: string, 
-    session: CashSession, 
+    shopId: string,
+    session: CashSession,
     closingData: { closingBalance: number, notes: string | undefined }
 ) => {
     // 1. Obtener todas las ventas realizadas durante esta sesión
     const sales = await getSalesByDateRange(shopId, new Date(session.startTime), new Date());
 
     // 2. Obtener las compras (gastos) realizadas por el empleado durante la sesión
-    const purchases = await apiClient<Purchase[]>(`/shops/${shopId}/purchases`);
+    const purchases = await apiClient<Purchase[]>(`/shops/${heladeriaId}/purchases`);
     const sessionPurchases = purchases.filter(p => {
         const pDate = new Date(p.createdAt as any);
-        return p.purchasedByEmployeeId === session.employeeId && pDate >= new Date(session.startTime);
+        return p.purchasedByEmployeeId === session.employeeId && pDate >= session.startTime.toDate();
     });
     const totalPurchaseExpenses = sessionPurchases.reduce((sum, exp) => sum + Number(exp.total), 0);
 
     // 2.1. OBTENER LOS GASTOS OPERATIVOS REGISTRADOS EN LA SESIÓN
-    const allExpenses = await apiClient<Expense[]>(`/shops/${shopId}/expenses`);
+    const allExpenses = await apiClient<Expense[]>(`/shops/${heladeriaId}/expenses`);
     const operationalExpenses = allExpenses.filter(e => e.sessionId === session.id);
     const totalOperationalExpenses = operationalExpenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
 
@@ -82,15 +79,15 @@ export const closeCashSession = async (
     await apiClient(`/cash-sessions/${session.id}/close`, {
         method: 'PUT',
         body: JSON.stringify({
-            closingBalance: closingData.closingBalance,
+            closing_balance: closingData.closingBalance,
             notes: closingData.notes,
-            cashSales,
-            transferSales,
-            totalSales: cashSales + transferSales,
-            totalExpenses,
-            expectedCashInBox,
+            cash_sales: cashSales,
+            transfer_sales: transferSales,
+            total_sales: cashSales + transferSales,
+            total_expenses: totalExpenses,
+            expected_cash_in_box: expectedCashInBox,
             difference,
-            unregisteredSales: 0 // Default logic
+            unregistered_sales: 0 // Default logic
         })
     });
 };

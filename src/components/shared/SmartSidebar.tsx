@@ -6,8 +6,13 @@ import {useAuthStore} from "../../store/authStore.ts";
 import {getPendingInvitations} from "../../services/shop/teamServices.ts";
 import {InvitationData, Shop} from "../../types";
 import {Envelope, PersonCircle, Moon, Sun, List, Shop, ChevronDown, ChevronRight, 
+<<<<<<< HEAD:src/components/shared/SmartSidebar.tsx
         CashStack, BoxSeam, GraphUp, GearFill} from "react-bootstrap-icons";
 import {logoutService} from "../../services/shared/logoutService.ts";
+=======
+        CashStack, BoxSeam, GraphUp, GearFill, Tag, ClipboardCheck} from "react-bootstrap-icons";
+import {logoutService} from "../../services/logoutService.ts";
+>>>>>>> refs/remotes/origin/main:src/components/general/SmartSidebar.tsx
 import {useTenant} from "../../context/TenantContext";
 import {useTheme} from "../../context/ThemeContext";
 import "../../style/SmartSidebar.css";
@@ -86,8 +91,6 @@ const SmartSidebar: FC<SmartSidebarProps> = ({isExpanded, setIsExpanded}) => {
     return (
         <nav
             id="sidebarMenu"
-            onMouseEnter={() => setIsExpanded(true)}
-            onMouseLeave={() => setIsExpanded(false)}
             className={`smart-sidebar sidebar d-flex flex-column ${isExpanded ? 'sidebar-expanded' : ''}`}
         >
             <div className="d-flex align-items-center justify-content-center py-3 border-bottom border-secondary-subtle">
@@ -104,6 +107,48 @@ const SmartSidebar: FC<SmartSidebarProps> = ({isExpanded, setIsExpanded}) => {
             </div>
             <div className="flex-grow-1 overflow-auto pt-2">
                 <ul className="nav flex-column mb-auto">
+                    {/* Link especial para SuperAdministrador */}
+                    {user?.role === 'superAdmin' && (
+                        <li className="nav-group mb-3 border-bottom border-secondary-subtle pb-3">
+                            <button
+                                className="nav-group-header text-warning"
+                                onClick={() => toggleGroup('saas')}
+                            >
+                                <GearFill className="sidebar-icon text-warning" size={20} />
+                                <span className="sidebar-text fw-bold">Administración SaaS</span>
+                                <span className="sidebar-text ms-auto text-warning">
+                                    {collapsedGroups['saas'] ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                                </span>
+                            </button>
+                            <ul className={`nav-group-items ${collapsedGroups['saas'] ? 'collapsed' : ''}`}>
+                                <li className="nav-item">
+                                    <NavLink className="nav-link position-relative text-warning text-opacity-75" to="/super-admin" end>
+                                        <Shop className="sidebar-icon text-warning text-opacity-75" size={20}/>
+                                        <span className="sidebar-text">Tiendas (SaaS)</span>
+                                    </NavLink>
+                                </li>
+                                <li className="nav-item">
+                                    <NavLink className="nav-link position-relative text-warning text-opacity-75" to="/super-admin/clients" end>
+                                        <PersonCircle className="sidebar-icon text-warning text-opacity-75" size={20}/>
+                                        <span className="sidebar-text">Clientes y Facturación</span>
+                                    </NavLink>
+                                </li>
+                                <li className="nav-item">
+                                    <NavLink className="nav-link position-relative text-warning text-opacity-75" to="/super-admin/catalog" end>
+                                        <Tag className="sidebar-icon text-warning text-opacity-75" size={20}/>
+                                        <span className="sidebar-text">Catálogo Maestro</span>
+                                    </NavLink>
+                                </li>
+                                <li className="nav-item">
+                                    <NavLink className="nav-link position-relative text-warning text-opacity-75" to="/super-admin/product-requests" end>
+                                        <ClipboardCheck className="sidebar-icon text-warning text-opacity-75" size={20}/>
+                                        <span className="sidebar-text">Solicitudes de Productos</span>
+                                    </NavLink>
+                                </li>
+                            </ul>
+                        </li>
+                    )}
+
                     {Object.entries(categoryConfig).map(([category, config]) => {
                         const items = groupedItems[category] || [];
                         if (items.length === 0) return null;
@@ -157,6 +202,7 @@ const SmartSidebar: FC<SmartSidebarProps> = ({isExpanded, setIsExpanded}) => {
                             </li>
                         );
                     })}
+<<<<<<< HEAD:src/components/shared/SmartSidebar.tsx
 
                     {/* Link especial para SuperAdministrador */}
                     {user?.role === 'superAdmin' && (
@@ -193,14 +239,36 @@ const SmartSidebar: FC<SmartSidebarProps> = ({isExpanded, setIsExpanded}) => {
                          <li className="nav-item mt-3">
                              <a 
                                  href={`/catalogo?shopId=${activeShopId}`} 
+=======
+                    
+                    {/* Acceso directo al Catálogo / Menú Público */}
+                    {user?.role === 'superAdmin' ? (
+                         <li className="nav-item mt-3">
+                             <a 
+                                 href="/catalogo?mode=master" 
+>>>>>>> refs/remotes/origin/main:src/components/general/SmartSidebar.tsx
                                  target="_blank" 
                                  rel="noopener noreferrer"
-                                 className="nav-link position-relative"
+                                 className="nav-link position-relative text-warning"
                              >
-                                 <Shop className="sidebar-icon" size={24}/>
-                                 <span className="sidebar-text">Ver Mi Menú</span>
+                                 <Shop className="sidebar-icon text-warning" size={24}/>
+                                 <span className="sidebar-text fw-bold">Ver Catálogo Completo</span>
                              </a>
                          </li>
+                    ) : (
+                        activeIceCreamShopId && (
+                             <li className="nav-item mt-3">
+                                 <a 
+                                     href={`/catalogo?shopId=${activeIceCreamShopId}`} 
+                                     target="_blank" 
+                                     rel="noopener noreferrer"
+                                     className="nav-link position-relative"
+                                 >
+                                     <Shop className="sidebar-icon" size={24}/>
+                                     <span className="sidebar-text">Ver Mi Menú</span>
+                                 </a>
+                             </li>
+                        )
                     )}
                     
                     {/* Dark Mode Toggle */}

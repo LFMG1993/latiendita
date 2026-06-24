@@ -57,24 +57,16 @@ const PaymentModal: FC<PaymentModalProps> = ({show, onClose, orderTotal, payment
     }, [show, orderTotal, paymentMethods]);
 
     const handleAddPayment = () => {
-        const amount = parseFloat(currentAmount);
+        const amountTendered = parseFloat(currentAmount);
         const method = paymentMethods.find(m => m.id === selectedMethodId);
 
-        if (!method || isNaN(amount) || amount <= 0) return;
+        if (!method || isNaN(amountTendered) || amountTendered <= 0) return;
 
-        // Permitimos agregar más del restante solo si es efectivo (para calcular cambio)
-        // Para otros métodos, limitamos al restante.
-        let amountToApply = amount;
-        
-        if (method.type !== 'cash' && amount > remainingAmount) {
-             amountToApply = remainingAmount;
-        }
+        // The actual amount recorded in the database shouldn't exceed the remaining order total
+        // to keep the cash session numbers accurate (we don't count change as income).
+        const amountToApply = Math.min(amountTendered, remainingAmount);
 
-        const currentTotalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
-        // Si ya está pagado todo, no permitir agregar más (salvo cambio en efectivo, pero eso se maneja diferente)
-        if (currentTotalPaid >= orderTotal) {
-             // Si es efectivo y quiere pagar "con X", calculamos cambio del total global
-        }
+        if (amountToApply <= 0) return;
 
         const newPayment: SalePayment = {
             methodId: method.id,
@@ -85,15 +77,15 @@ const PaymentModal: FC<PaymentModalProps> = ({show, onClose, orderTotal, payment
 
         setPayments(prev => [...prev, newPayment]);
         
-        // Recalcular cambio
-        const newTotalPaid = currentTotalPaid + amountToApply;
-        if (newTotalPaid > orderTotal && method.type === 'cash') {
-             setChangeDue(newTotalPaid - orderTotal);
+        // Asistente de vueltos: Calculamos el cambio si pagó de más con efectivo
+        if (method.type === 'cash' && amountTendered > remainingAmount) {
+             setChangeDue(amountTendered - remainingAmount);
         } else {
-             setChangeDue(0);
+             // Si el usuario da monto exacto u otro método, no hay cambio nuevo, 
+             // pero no borramos el cambio anterior si ya se había calculado.
         }
 
-        const newRemaining = Math.max(0, orderTotal - newTotalPaid);
+        const newRemaining = Math.max(0, remainingAmount - amountToApply);
         setCurrentAmount(newRemaining > 0 ? newRemaining.toString() : '');
     };
 
@@ -225,7 +217,7 @@ const PaymentModal: FC<PaymentModalProps> = ({show, onClose, orderTotal, payment
                                 </div>
                             </div>
                             <div className="col-7 col-md-4">
-                                <label className="form-label small fw-bold text-muted">Monto</label>
+                                <label className="form-label small fw-bold text-muted">Monto Recibido</label>
                                 <input 
                                     type="number" 
                                     className="form-control" 
@@ -245,6 +237,30 @@ const PaymentModal: FC<PaymentModalProps> = ({show, onClose, orderTotal, payment
                                     <i className="bi bi-plus-lg d-md-none d-lg-inline-block"></i> Añadir
                                 </button>
                             </div>
+                            {/* Quick Amount Buttons for Cash */}
+                            {paymentMethods.find(m => m.id === selectedMethodId)?.type === 'cash' && (
+                                <div className="col-12 mt-3">
+                                    <div className="d-flex gap-2 flex-wrap">
+                                        <button 
+                                            type="button" 
+                                            className="btn btn-sm btn-outline-success rounded-pill px-3"
+                                            onClick={() => setCurrentAmount(remainingAmount.toString())}
+                                        >
+                                            Exacto ({formatCurrency(remainingAmount)})
+                                        </button>
+                                        {[10000, 20000, 50000, 100000].filter(amt => amt > remainingAmount).map(amount => (
+                                            <button 
+                                                key={amount}
+                                                type="button" 
+                                                className="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                                                onClick={() => setCurrentAmount(amount.toString())}
+                                            >
+                                                {formatCurrency(amount)}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -405,11 +421,13 @@ const PaymentModal: FC<PaymentModalProps> = ({show, onClose, orderTotal, payment
                                                  <span className={selectedClient.debt && selectedClient.debt > 0 ? 'text-danger fw-bold' : ''}>
                                                      Deuda: {formatCurrency(selectedClient.debt || 0)}
                                                  </span>
-                                                 {selectedClient.creditLimit && selectedClient.creditLimit > 0 ? (
+                                                 {selectedClient.isCreditEnabled ? (
                                                      <span className="text-info fw-bold">
-                                                         Límite: {formatCurrency(selectedClient.creditLimit)}
+                                                         Disponible: {selectedClient.creditLimit ? formatCurrency(Math.max(0, selectedClient.creditLimit - (selectedClient.debt || 0))) : 'Ilimitado'}
                                                      </span>
-                                                 ) : null}
+                                                 ) : (
+                                                     <span className="text-warning fw-bold">Sin Crédito</span>
+                                                 )}
                                              </div>
                                          </div>
                                          <button className="btn btn-outline-danger btn-sm rounded-circle p-2 lh-1" onClick={() => onSelectClient('')}>

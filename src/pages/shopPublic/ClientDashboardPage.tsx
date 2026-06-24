@@ -11,12 +11,27 @@ import {useNavigate, useSearchParams} from 'react-router-dom';
 import {Wallet2, Receipt, ClockHistory, BoxArrowRight, GeoAltFill, MoonFill, SunFill, Plus, Dash, CartFill, PersonCircle, CheckLg, KeyFill} from 'react-bootstrap-icons';
 import {useTenant} from '../../context/TenantContext';
 import {useTheme} from '../../context/ThemeContext';
+<<<<<<< HEAD:src/pages/shopPublic/ClientDashboardPage.tsx
 import {getPublicProducts, getAllPublicShops} from '../../services/shopPublic/publicProductService';
 import {PublicProduct} from '../../types/public.types';
 import {createOrder} from '../../services/shop/orderService';
 import {logoutService} from '../../services/shared/logoutService';
 import { updateUserProfile } from "../../services/shared/userServices";
+=======
+import {getPublicProducts} from '../../services/publicProductService';
+import {getClientEnrolledShops} from '../../services/clientService';
+import {getAllMasterProducts, getMasterProductShops, enrollClientToShop, ShopProductStatus} from '../../services/masterProductService';
+import {MasterProduct} from '../../types/masterProduct.types';
+import {PublicProduct} from '../../types/public.types';
+import {createOrder} from '../../services/orderService';
+import {logoutService} from '../../services/logoutService';
+import {getAllClientSales} from "../../services/saleServices.ts";
+import {getOpenCashSession} from '../../services/cashSessionServices';
+import {doc, updateDoc} from 'firebase/firestore';
+import {auth, db} from '../../firebase';
+>>>>>>> refs/remotes/origin/main:src/pages/public/ClientDashboardPage.tsx
 import {useToast} from '../../context/ToastContext';
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 
 const ClientDashboardPage: FC = () => {
     const {user} = useAuthStore();
@@ -29,7 +44,7 @@ const ClientDashboardPage: FC = () => {
     const [financials, setFinancials] = useState<ClientFinancials>({credits: 0, debt: 0, isCreditEnabled: false});
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'pending' | 'history' | 'order' | 'profile' | 'debt_payments'>('order');
+    const [activeTab, setActiveTab] = useState<'master_catalog' | 'pending' | 'history' | 'order' | 'profile' | 'debt_payments'>('order');
 
     // Estado para pagos de deuda
     const [debtPaymentsList, setDebtPaymentsList] = useState<DebtPaymentRequest[]>([]);
@@ -44,12 +59,22 @@ const ClientDashboardPage: FC = () => {
     const [products, setProducts] = useState<PublicProduct[]>([]);
     const [cart, setCart] = useState<{product: PublicProduct, quantity: number}[]>([]);
     const [submittingOrder, setSubmittingOrder] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState<'cash' | 'credit'>('cash');
+    const [paymentMethod, setPaymentMethod] = useState<'cash' | 'credit' | 'electronic'>('cash');
+    const [selectedElectronicMethodId, setSelectedElectronicMethodId] = useState<string | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<string>('Todas');
     const [visibleProductsCount, setVisibleProductsCount] = useState(6);
-    const [availableShops, setAvailableShops] = useState<{id: string, name: string, logoURL?: string}[]>([]);
+    const [availableShops, setAvailableShops] = useState<{id: string, name: string, logoURL?: string, isOpen?: boolean}[]>([]);
     const [currentShopId, setCurrentShopId] = useState<string | null>(null);
     const [showShopSelectorModal, setShowShopSelectorModal] = useState(false);
+    const [isShopOpen, setIsShopOpen] = useState(true);
+
+    // Estado para Catálogo Maestro
+    const [masterProducts, setMasterProducts] = useState<MasterProduct[]>([]);
+    const [masterSearch, setMasterSearch] = useState('');
+    const [selectedMasterProduct, setSelectedMasterProduct] = useState<MasterProduct | null>(null);
+    const [masterProductShops, setMasterProductShops] = useState<ShopProductStatus[]>([]);
+    const [showMasterProductModal, setShowMasterProductModal] = useState(false);
+
 
     // Estado para el perfil
     const [profileFirstName, setProfileFirstName] = useState('');
@@ -69,15 +94,37 @@ const ClientDashboardPage: FC = () => {
             if (!user) return;
             
             try {
-                // 1. Obtener datos básicos
-                const [finData, ordersData, debtData] = await Promise.all([
-                    getClientFinancials(user.uid),
+                // 1. Obtener órdenes, ventas y deudas
+                const [ordersData, salesData, debtData] = await Promise.all([
                     getClientOrders(user.uid),
+                    getAllClientSales(user.uid),
                     getClientDebtPayments(user.uid)
                 ]);
                 
-                setFinancials(finData);
-                setOrders(ordersData);
+                const mappedSales: Order[] = salesData.map(sale => ({
+                    id: sale.id,
+                    shopId: sale.shopId || '',
+                    clientId: user.uid,
+                    clientName: sale.clientName,
+                    items: sale.items.map(i => ({ 
+                        product: { name: i.productName }, 
+                        quantity: i.quantity, 
+                        priceAtPurchase: i.unitPrice 
+                    })),
+                    totalAmount: sale.total,
+                    totalItems: sale.items.reduce((sum, i) => sum + i.quantity, 0),
+                    paymentMethod: sale.payments && sale.payments.length > 0 ? sale.payments[0].type : 'cash',
+                    status: 'delivered',
+                    createdAt: sale.createdAt
+                } as any));
+
+                const combinedHistory = [...ordersData, ...mappedSales].sort((a, b) => {
+                    const dateA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+                    const dateB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+                    return dateB - dateA;
+                });
+
+                setOrders(combinedHistory);
                 setDebtPaymentsList(debtData);
 
                 // 2. Determinar shopId con resiliencia
@@ -86,22 +133,77 @@ const ClientDashboardPage: FC = () => {
                 // Si no hay en URL ni local, buscamos en el último pedido
                 const lastOrderShopId = ordersData.length > 0 ? ordersData[0].shopId : null;
                 
+<<<<<<< HEAD:src/pages/shopPublic/ClientDashboardPage.tsx
                 const shopId = urlShopId || localShopId || lastOrderShopId || user.shopIds?.[0];
+=======
+                let shopId = urlShopId || localShopId || lastOrderShopId || user.iceCreamShopIds?.[0];
+                if (shopId === 'mock-shop-id-123') {
+                    shopId = null;
+                    localStorage.removeItem('last_shop_id');
+                }
+>>>>>>> refs/remotes/origin/main:src/pages/public/ClientDashboardPage.tsx
                 setCurrentShopId(shopId || null);
+
+                // 3. Obtener financials si hay shopId
+                if (shopId) {
+                    const finData = await getClientFinancials(shopId, user.uid);
+                    setFinancials(finData);
+                }
 
                 if (shopId) {
                     if (!localShopId) localStorage.setItem('last_shop_id', shopId);
-                    const [productsData, shops, methodsData] = await Promise.all([
+                    const [productsData, shops, methodsData, masterData, openSession] = await Promise.all([
                         getPublicProducts(shopId),
-                        getAllPublicShops(),
-                        getActivePaymentMethods(shopId)
+                        getClientEnrolledShops(user.uid),
+                        getActivePaymentMethods(shopId),
+                        getAllMasterProducts(),
+                        getOpenCashSession(shopId)
                     ]);
+                    
+                    const shopsWithStatus = await Promise.all(shops.map(async (s) => {
+                        const session = await getOpenCashSession(s.id);
+                        return { ...s, isOpen: !!session };
+                    }));
+
                     setProducts(productsData);
-                    setAvailableShops(shops);
+                    setAvailableShops(shopsWithStatus);
                     setPaymentMethodsList(methodsData.filter(m => m.type !== 'credit'));
+                    setMasterProducts(masterData);
+                    setIsShopOpen(!!openSession);
                 } else {
-                    const shops = await getAllPublicShops();
-                    setAvailableShops(shops);
+                    const [shops, masterData] = await Promise.all([
+                        getClientEnrolledShops(user.uid),
+                        getAllMasterProducts()
+                    ]);
+                    
+                    const shopsWithStatus = await Promise.all(shops.map(async (s) => {
+                        const session = await getOpenCashSession(s.id);
+                        return { ...s, isOpen: !!session };
+                    }));
+
+                    setAvailableShops(shopsWithStatus);
+                    setMasterProducts(masterData);
+
+                    // Si el cliente tiene al menos una tienda inscrita, usar la primera para cargar financials
+                    if (shops.length > 0) {
+                        const firstShopId = shops[0].id;
+                        setCurrentShopId(firstShopId);
+                        localStorage.setItem('last_shop_id', firstShopId);
+                        try {
+                            const [finData, productsData, methodsData, openSession] = await Promise.all([
+                                getClientFinancials(firstShopId, user.uid),
+                                getPublicProducts(firstShopId),
+                                getActivePaymentMethods(firstShopId),
+                                getOpenCashSession(firstShopId)
+                            ]);
+                            setFinancials(finData);
+                            setProducts(productsData);
+                            setPaymentMethodsList(methodsData.filter(m => m.type !== 'credit'));
+                            setIsShopOpen(!!openSession);
+                        } catch (e) {
+                            console.error('Error cargando datos de tienda por defecto:', e);
+                        }
+                    }
                 }
             } catch (err) {
                 console.error("Error cargando dashboard:", err);
@@ -142,12 +244,18 @@ const ClientDashboardPage: FC = () => {
         setShowShopSelectorModal(false);
         setLoading(true);
         try {
-            const [productsData, methodsData] = await Promise.all([
+            if (user?.uid) {
+                const finData = await getClientFinancials(selectedShopId, user.uid);
+                setFinancials(finData);
+            }
+            const [productsData, methodsData, openSession] = await Promise.all([
                 getPublicProducts(selectedShopId),
-                getActivePaymentMethods(selectedShopId)
+                getActivePaymentMethods(selectedShopId),
+                getOpenCashSession(selectedShopId)
             ]);
             setProducts(productsData);
             setPaymentMethodsList(methodsData.filter(m => m.type !== 'credit'));
+            setIsShopOpen(!!openSession);
         } catch (e) {
             console.error(e);
         } finally {
@@ -266,18 +374,45 @@ const ClientDashboardPage: FC = () => {
                 })),
                 totalAmount: cartTotal,
                 totalItems: cart.reduce((sum, i) => sum + i.quantity, 0),
-                paymentMethod: paymentMethod
+                paymentMethod: paymentMethod,
+                pendingDebt: paymentMethod === 'credit' ? cartTotal : 0,
+                note: paymentMethod === 'electronic' ? `Pago mediante: ${paymentMethodsList.find(m => m.id === selectedElectronicMethodId)?.name || 'Transferencia'}` : ''
             };
 
             await createOrder(orderData);
             
             // Actualizar vista
-            const [newFin, newOrders] = await Promise.all([
-                getClientFinancials(user.uid),
-                getClientOrders(user.uid)
+            const [newFin, newOrders, newSales] = await Promise.all([
+                getClientFinancials(shopId, user.uid),
+                getClientOrders(user.uid),
+                getAllClientSales(user.uid)
             ]);
+            
+            const mappedNewSales: Order[] = newSales.map(sale => ({
+                id: sale.id,
+                shopId: sale.shopId || '',
+                clientId: user.uid,
+                clientName: sale.clientName,
+                items: sale.items.map(i => ({ 
+                    product: { name: i.productName }, 
+                    quantity: i.quantity, 
+                    priceAtPurchase: i.unitPrice 
+                })),
+                totalAmount: sale.total,
+                totalItems: sale.items.reduce((sum, i) => sum + i.quantity, 0),
+                paymentMethod: sale.payments && sale.payments.length > 0 ? sale.payments[0].type : 'cash',
+                status: 'delivered',
+                createdAt: sale.createdAt
+            } as any));
+
+            const newCombinedHistory = [...newOrders, ...mappedNewSales].sort((a, b) => {
+                const dateA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+                const dateB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+                return dateB - dateA;
+            });
+
             setFinancials(newFin);
-            setOrders(newOrders);
+            setOrders(newCombinedHistory);
             setCart([]);
             setActiveTab('pending');
             showToast("¡Pedido realizado con éxito!", "success");
@@ -369,19 +504,28 @@ const ClientDashboardPage: FC = () => {
                             {theme === 'light' ? <MoonFill size={14}/> : <SunFill size={14}/>}
                         </button>
 
-                        {/* Selector de tiendas */}
-                        {/* Selector de tiendas siempre visible */}
-                        <select
-                            className="form-select form-select-sm"
-                            style={{backgroundColor:'rgba(255,255,255,0.15)', border:'1px solid rgba(255,255,255,0.3)', borderRadius:20, padding:'2px 6px', maxWidth:'200px'}}
-                            value={currentShopId || ''}
-                            onChange={e => handleSelectShop(e.target.value)}
+                        {/* Selector de tiendas - botón que abre modal */}
+                        <button
+                            className="btn btn-sm d-flex align-items-center gap-2 text-white fw-semibold"
+                            style={{
+                                background: 'rgba(255,255,255,0.18)',
+                                border: '1.5px solid rgba(255,255,255,0.4)',
+                                borderRadius: 20,
+                                padding: '5px 14px',
+                                maxWidth: 200,
+                                overflow: 'hidden',
+                                whiteSpace: 'nowrap',
+                            }}
+                            onClick={() => setShowShopSelectorModal(true)}
+                            title="Cambiar tienda"
                         >
-                            <option value="" disabled>Seleccionar tienda</option>
-                            {availableShops.map(shop => (
-                                <option key={shop.id} value={shop.id}>{shop.name}</option>
-                            ))}
-                        </select>
+                            <GeoAltFill size={14} className="flex-shrink-0" />
+                            <span className="text-truncate small">
+                                {currentShopId
+                                    ? (availableShops.find(s => s.id === currentShopId)?.name || 'Tienda')
+                                    : 'Seleccionar tienda'}
+                            </span>
+                        </button>
 
                         {/* Botón de Perfil */}
                         <button
@@ -405,9 +549,25 @@ const ClientDashboardPage: FC = () => {
             <div className="container py-4 pb-5 mb-4 mb-md-0 pb-md-4">
                 {/* Header Bienvenida */}
                 <div className="row mb-4">
-                    <div className="col-12">
-                        <h2 className="fw-bold mb-0">Hola, {user?.firstName}</h2>
-                        <p className="text-secondary">Este es tu resumen de cuenta y pedidos.</p>
+                    <div className="col-12 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <div>
+                            <h2 className="fw-bold mb-0">Hola, {user?.firstName} 👋</h2>
+                            <p className="text-secondary mb-0 mt-1 small">Este es tu resumen de cuenta y pedidos.</p>
+                        </div>
+                        {/* Indicador de tienda activa */}
+                        <button
+                            className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2 rounded-pill px-3"
+                            onClick={() => setShowShopSelectorModal(true)}
+                            title="Cambiar tienda"
+                        >
+                            <GeoAltFill size={14} />
+                            <span className="small fw-semibold">
+                                {currentShopId
+                                    ? (availableShops.find(s => s.id === currentShopId)?.name || 'Tienda activa')
+                                    : 'Seleccionar tienda'}
+                            </span>
+                            <span className="badge bg-primary rounded-pill" style={{fontSize:'0.65rem'}}>Cambiar</span>
+                        </button>
                     </div>
                 </div>
 
@@ -423,13 +583,23 @@ const ClientDashboardPage: FC = () => {
                                     <div>
                                         <h6 className="text-muted mb-1 text-uppercase small fw-bold">Deuda Pendiente (Fiado)</h6>
                                         <h2 className="mb-0 fw-bold text-danger">{formatCurrency(financials.debt)}</h2>
-                                        {financials.isCreditEnabled && financials.creditLimit && financials.creditLimit > 0 ? (
+                                        {financials.isCreditEnabled ? (
                                             <div className="small text-muted mt-2 d-flex align-items-center gap-2" style={{fontSize: '0.85rem'}}>
-                                                <span>Cupo máx: <strong className="text-body">{formatCurrency(financials.creditLimit)}</strong></span>
-                                                <span className="text-muted">•</span>
-                                                <span>Disponible: <strong className="text-success">{formatCurrency(Math.max(0, financials.creditLimit - financials.debt))}</strong></span>
+                                                <span>Disponible: <strong className="text-success">
+                                                    {financials.creditLimit && financials.creditLimit > 0 
+                                                        ? formatCurrency(Math.max(0, financials.creditLimit - financials.debt)) 
+                                                        : 'Ilimitado'}
+                                                </strong></span>
+                                                {financials.creditLimit && financials.creditLimit > 0 ? (
+                                                    <>
+                                                        <span className="text-muted">•</span>
+                                                        <span>Cupo máx: <strong className="text-body">{formatCurrency(financials.creditLimit)}</strong></span>
+                                                    </>
+                                                ) : null}
                                             </div>
-                                        ) : null}
+                                        ) : (
+                                            <div className="small mt-2"><span className="badge bg-warning text-dark"><i className="bi bi-lock-fill"></i> Crédito Inhabilitado</span></div>
+                                        )}
                                     </div>
                                 </div>
                                 {financials.debt > 0 && (
@@ -450,6 +620,14 @@ const ClientDashboardPage: FC = () => {
                 <div className="card border-0 shadow-sm bg-body">
                     <div className="card-header bg-transparent border-bottom-0 pt-4 px-4 d-none d-md-block">
                         <ul className="nav nav-tabs card-header-tabs">
+                            <li className="nav-item">
+                                <button 
+                                    className={`nav-link ${activeTab === 'master_catalog' ? 'active fw-bold' : 'text-secondary'}`}
+                                    onClick={() => setActiveTab('master_catalog')}
+                                >
+                                    Catálogo General
+                                </button>
+                            </li>
                             <li className="nav-item">
                                 <button 
                                     className={`nav-link ${activeTab === 'order' ? 'active fw-bold' : 'text-secondary'}`}
@@ -493,7 +671,58 @@ const ClientDashboardPage: FC = () => {
                         </ul>
                     </div>
                     <div className="card-body p-0">
-                        {activeTab === 'profile' ? (
+                        {activeTab === 'master_catalog' ? (
+                            <div className="p-4 bg-body">
+                                <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+                                    <h5 className="fw-bold mb-0">Catálogo General</h5>
+                                    <input 
+                                        type="text" 
+                                        className="form-control w-auto rounded-pill" 
+                                        placeholder="Buscar producto..." 
+                                        value={masterSearch}
+                                        onChange={e => setMasterSearch(e.target.value)}
+                                    />
+                                </div>
+                                <div className="row g-3">
+                                    {masterProducts.filter(p => p.name.toLowerCase().includes(masterSearch.toLowerCase()) || p.brand?.toLowerCase().includes(masterSearch.toLowerCase())).map(product => (
+                                        <div key={product.id} className="col-md-6 col-xl-4">
+                                            <div className="card border-0 shadow-sm h-100 bg-body-tertiary">
+                                                <div className="card-body p-3 text-center d-flex flex-column">
+                                                    {product.image_url ? (
+                                                        <img src={product.image_url} alt={product.name} className="img-fluid rounded mb-3 mx-auto" style={{height: '120px', objectFit: 'contain'}} />
+                                                    ) : (
+                                                        <div className="bg-secondary bg-opacity-10 rounded mb-3 mx-auto d-flex align-items-center justify-content-center" style={{height: '120px', width: '120px'}}>
+                                                            <BoxArrowRight className="text-secondary" size={32}/>
+                                                        </div>
+                                                    )}
+                                                    <h6 className="fw-bold mb-1 text-truncate">{product.name}</h6>
+                                                    <p className="small text-muted mb-2 text-truncate">{product.brand || 'Sin marca'}</p>
+                                                    <div className="mt-auto">
+                                                        <button 
+                                                            className="btn btn-sm w-100 fw-bold rounded-pill btn-outline-primary mt-2" 
+                                                            style={{borderColor: tenant.theme.primaryColor, color: tenant.theme.primaryColor}}
+                                                            onClick={async () => {
+                                                                setSelectedMasterProduct(product);
+                                                                const shops = await getMasterProductShops(product.id, user?.uid);
+                                                                setMasterProductShops(shops);
+                                                                setShowMasterProductModal(true);
+                                                            }}
+                                                        >
+                                                            <GeoAltFill className="me-1"/> Ver Tiendas
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {masterProducts.length === 0 && (
+                                        <div className="col-12 text-center py-5">
+                                            <p className="text-secondary">No hay productos en el catálogo maestro.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ) : activeTab === 'profile' ? (
                             <div className="p-4 bg-body">
                                 <div className="row g-4">
                                     {/* Datos Personales */}
@@ -635,6 +864,15 @@ const ClientDashboardPage: FC = () => {
                                 <div className="row g-0">
                                     {/* Lista de Productos */}
                                     <div className="col-lg-8 border-end p-4">
+                                        {!isShopOpen && (
+                                            <div className="alert alert-warning mb-4 d-flex align-items-center gap-2 shadow-sm border-0" style={{borderRadius: '12px'}}>
+                                                <span>⏳</span>
+                                                <div>
+                                                    <strong>Tienda cerrada en este momento</strong>
+                                                    <div className="small">No es posible realizar pedidos hasta que la tienda vuelva a abrir. Aún puedes explorar el menú.</div>
+                                                </div>
+                                            </div>
+                                        )}
                                         <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
                                             <h5 className="fw-bold mb-0">Nuestro Menú</h5>
                                             <div 
@@ -675,8 +913,9 @@ const ClientDashboardPage: FC = () => {
                                                                         <p className="small text-muted mb-3 text-truncate-2" style={{height: '40px'}}>{product.description}</p>
                                                                         <button 
                                                                             className="btn btn-sm w-100 fw-bold rounded-pill" 
-                                                                            style={{backgroundColor: tenant.theme.primaryColor, color: '#fff'}}
+                                                                            style={{backgroundColor: isShopOpen ? tenant.theme.primaryColor : '#e9ecef', color: isShopOpen ? '#fff' : '#6c757d'}}
                                                                             onClick={() => addToCart(product)}
+                                                                            disabled={!isShopOpen}
                                                                         >
                                                                             <Plus className="me-1"/> Agregar
                                                                         </button>
@@ -746,13 +985,16 @@ const ClientDashboardPage: FC = () => {
                                                     {paymentMethodsList.map(m => (
                                                         <div key={m.id}>
                                                             <button 
-                                                                className={`btn btn-sm text-start w-100 d-flex align-items-center justify-content-between p-2 rounded-3 border-2 ${paymentMethod === m.id ? 'border-success bg-success bg-opacity-10' : 'border-light bg-body'}`}
-                                                                onClick={() => setPaymentMethod(m.id as any)}
+                                                                className={`btn btn-sm text-start w-100 d-flex align-items-center justify-content-between p-2 rounded-3 border-2 ${paymentMethod === 'electronic' && selectedElectronicMethodId === m.id ? 'border-success bg-success bg-opacity-10' : 'border-light bg-body'}`}
+                                                                onClick={() => {
+                                                                    setPaymentMethod('electronic');
+                                                                    setSelectedElectronicMethodId(m.id);
+                                                                }}
                                                             >
-                                                                <span className={`small fw-bold ${paymentMethod === m.id ? 'text-success' : 'text-body'}`}>{m.name}</span>
-                                                                {paymentMethod === m.id && <div className="rounded-circle bg-success" style={{width: '8px', height: '8px'}}></div>}
+                                                                <span className={`small fw-bold ${paymentMethod === 'electronic' && selectedElectronicMethodId === m.id ? 'text-success' : 'text-body'}`}>{m.name}</span>
+                                                                {paymentMethod === 'electronic' && selectedElectronicMethodId === m.id && <div className="rounded-circle bg-success" style={{width: '8px', height: '8px'}}></div>}
                                                             </button>
-                                                            {paymentMethod === m.id && m.accountDetails && (
+                                                            {paymentMethod === 'electronic' && selectedElectronicMethodId === m.id && m.accountDetails && (
                                                                 <div className="alert alert-success py-2 px-3 mt-1 mb-0 small d-flex align-items-center gap-2" style={{borderRadius: '10px'}}>
                                                                     <span>💳</span>
                                                                     <span>Transfiere a: <strong>{m.accountDetails}</strong></span>
@@ -779,11 +1021,11 @@ const ClientDashboardPage: FC = () => {
 
                                             <button 
                                                 className="btn btn-primary w-100 py-3 fw-bold rounded-pill shadow-sm"
-                                                style={{backgroundColor: tenant.theme.primaryColor, borderColor: tenant.theme.primaryColor}}
+                                                style={{backgroundColor: isShopOpen ? tenant.theme.primaryColor : '#e9ecef', borderColor: isShopOpen ? tenant.theme.primaryColor : '#dee2e6', color: isShopOpen ? '#fff' : '#6c757d'}}
                                                 onClick={handleCheckout}
-                                                disabled={submittingOrder}
+                                                disabled={submittingOrder || !isShopOpen}
                                             >
-                                                {submittingOrder ? 'Procesando...' : 'Confirmar Pedido'}
+                                                {submittingOrder ? 'Procesando...' : (isShopOpen ? 'Confirmar Pedido' : 'Tienda Cerrada')}
                                             </button>
                                         </>
                                     ) : (
@@ -851,8 +1093,8 @@ const ClientDashboardPage: FC = () => {
                                         <div className="mb-2">
                                             <p className="mb-1 small text-secondary">Items: {order.totalItems}</p>
                                             <ul className="list-unstyled mb-0 small text-muted ps-2 border-start">
-                                                {order.items.map((item, idx) => (
-                                                    <li key={idx}>{item.quantity}x {item.product.name}</li>
+                                                {(order.items || []).map((item, idx) => (
+                                                    <li key={idx}>{item.quantity}x {item.product?.name || item.productName || 'Producto'}</li>
                                                 ))}
                                             </ul>
                                         </div>
@@ -907,14 +1149,20 @@ const ClientDashboardPage: FC = () => {
                                     <div className="row g-3">
                                         {availableShops.map(shop => {
                                             const isSelected = currentShopId === shop.id;
+                                            const isDisabled = shop.isOpen === false;
                                             return (
                                                 <div key={shop.id} className="col-12 col-md-6 col-lg-4">
                                                     <div
-                                                        className={`card h-100 border-2 shop-card ${isSelected ? 'border-primary' : 'border-light'}`}
-                                                        style={{cursor: 'pointer', transition: 'all 0.2s ease', boxShadow: isSelected ? `0 0 0 3px ${tenant.theme.primaryColor}40` : ''}}
-                                                        onClick={() => handleSelectShop(shop.id)}
+                                                        className={`card h-100 border-2 shop-card ${isSelected ? 'border-primary' : 'border-light'} ${isDisabled ? 'opacity-50' : ''}`}
+                                                        style={{cursor: isDisabled ? 'not-allowed' : 'pointer', transition: 'all 0.2s ease', boxShadow: isSelected ? `0 0 0 3px ${tenant.theme.primaryColor}40` : ''}}
+                                                        onClick={() => {
+                                                            if (!isDisabled) handleSelectShop(shop.id);
+                                                        }}
                                                     >
-                                                        <div className="card-body p-4 text-center d-flex flex-column align-items-center justify-content-center">
+                                                        <div className="card-body p-4 text-center d-flex flex-column align-items-center justify-content-center position-relative">
+                                                            {isDisabled && (
+                                                                <span className="badge bg-warning text-dark position-absolute top-0 end-0 m-2">Cerrada</span>
+                                                            )}
                                                             <div className={`rounded-circle d-inline-flex p-3 mb-3 ${isSelected ? 'bg-primary' : 'bg-body-tertiary'}`}>
                                                                 {shop.logoURL ? (
                                                                     <img src={shop.logoURL} alt={shop.name} height="36" width="36" className="object-fit-contain" style={{borderRadius: '50%'}}/>
@@ -943,6 +1191,81 @@ const ClientDashboardPage: FC = () => {
                                     </button>
                                 </div>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ===== MODAL TIENDAS DEL PRODUCTO MAESTRO ===== */}
+            {showMasterProductModal && selectedMasterProduct && (
+                <div className="modal show d-block" tabIndex={-1} style={{backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', zIndex: 1060}}>
+                    <div className="modal-dialog modal-dialog-centered modal-lg">
+                        <div className="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                            <div className="modal-header border-0 px-4 pt-4 pb-2" style={{background: `linear-gradient(135deg, ${tenant.theme.primaryColor}20, transparent)`}}>
+                                <div>
+                                    <h4 className="modal-title fw-bold mb-0">Comprar {selectedMasterProduct.name}</h4>
+                                    <p className="text-muted small mb-0 mt-1">Selecciona la tienda donde deseas realizar tu pedido.</p>
+                                </div>
+                                <button type="button" className="btn-close ms-auto" onClick={() => setShowMasterProductModal(false)}></button>
+                            </div>
+                            <div className="modal-body p-4">
+                                {masterProductShops.length === 0 ? (
+                                    <div className="text-center py-5 text-muted">
+                                        <BoxArrowRight size={48} className="mb-3 opacity-25"/>
+                                        <p>Ninguna tienda tiene este producto disponible en este momento.</p>
+                                    </div>
+                                ) : (
+                                    <div className="row g-3">
+                                        {masterProductShops.map(shop => (
+                                            <div key={shop.shop_id} className="col-12 col-md-6">
+                                                <div className="card h-100 border-2 border-light shop-card" style={{transition: 'all 0.2s ease'}}>
+                                                    <div className="card-body p-3">
+                                                        <div className="d-flex justify-content-between align-items-start mb-2">
+                                                            <h6 className="fw-bold mb-0 text-truncate" style={{maxWidth: '70%'}}>{shop.shop_name}</h6>
+                                                            <span className="badge bg-primary bg-opacity-10 text-primary">{formatCurrency(shop.price)}</span>
+                                                        </div>
+                                                        <div className="d-flex justify-content-between align-items-center mb-3">
+                                                            <span className={`small fw-bold ${shop.stock > 0 ? 'text-success' : 'text-danger'}`}>
+                                                                {shop.stock > 0 ? `Stock: ${shop.stock}` : 'Agotado'}
+                                                            </span>
+                                                            {!shop.is_enrolled && (
+                                                                <span className="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25" style={{fontSize: '0.65rem'}}>Nueva</span>
+                                                            )}
+                                                        </div>
+                                                        <button 
+                                                            className="btn btn-sm w-100 fw-bold rounded-pill" 
+                                                            style={{backgroundColor: tenant.theme.primaryColor, color: '#fff'}}
+                                                            disabled={shop.stock <= 0}
+                                                            onClick={async () => {
+                                                                if (!user) return;
+                                                                try {
+                                                                    if (!shop.is_enrolled) {
+                                                                        await enrollClientToShop(shop.shop_id, user.uid);
+                                                                    }
+                                                                    await handleSelectShop(shop.shop_id);
+                                                                    setShowMasterProductModal(false);
+                                                                    setActiveTab('order');
+                                                                    showToast(`¡Bienvenido a ${shop.shop_name}! Busca tu producto para agregarlo al carrito.`, 'success');
+                                                                } catch (error) {
+                                                                    console.error(error);
+                                                                    showToast('Ocurrió un error al intentar cambiar de tienda.', 'danger');
+                                                                }
+                                                            }}
+                                                        >
+                                                            {shop.is_enrolled ? 'Comprar aquí' : 'Inscribirse y comprar'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="modal-footer border-0 px-4 pb-4 pt-0">
+                                <button type="button" className="btn btn-secondary rounded-pill px-4" onClick={() => setShowMasterProductModal(false)}>
+                                    Cancelar
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

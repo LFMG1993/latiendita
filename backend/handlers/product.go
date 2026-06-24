@@ -2,6 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
+<<<<<<< HEAD
+=======
+	"io"
+	"log"
+>>>>>>> refs/remotes/origin/main
 	"net/http"
 	"strings"
 
@@ -76,13 +81,14 @@ func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 	productID := parts[len(parts)-1]
 
-	var p models.Product
-	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
-		jsonError(w, "Invalid JSON", http.StatusBadRequest)
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		jsonError(w, "Error reading request body", http.StatusBadRequest)
 		return
 	}
 	p.ID = productID
 
+<<<<<<< HEAD
 	if err := h.productService.UpdateProduct(&p); err != nil {
 		if strings.Contains(err.Error(), "required") {
 			jsonError(w, err.Error(), http.StatusBadRequest)
@@ -91,6 +97,77 @@ func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		} else {
 			jsonError(w, "Internal server error", http.StatusInternalServerError)
 		}
+=======
+	var p models.Product
+	if err := json.Unmarshal(bodyBytes, &p); err != nil {
+		jsonError(w, "Invalid JSON structure", http.StatusBadRequest)
+		return
+	}
+
+	var raw map[string]interface{}
+	if err := json.Unmarshal(bodyBytes, &raw); err != nil {
+		jsonError(w, "Invalid JSON map", http.StatusBadRequest)
+		return
+	}
+
+	hasField := func(keys ...string) bool {
+		for _, k := range keys {
+			if _, ok := raw[k]; ok {
+				return true
+			}
+		}
+		return false
+	}
+
+	namePresent := hasField("name")
+	pricePresent := hasField("price")
+	categoryPresent := hasField("category")
+	costPresent := hasField("cost")
+	stockPresent := hasField("stock")
+	imageUrlPresent := hasField("image_url", "imageURL", "imageUrl")
+	descPresent := hasField("description")
+	availPresent := hasField("is_available", "isAvailable")
+
+	query := `
+		UPDATE products SET
+			name = CASE WHEN $1 THEN $2 ELSE name END,
+			price = CASE WHEN $3 THEN $4 ELSE price END,
+			category = CASE WHEN $5 THEN $6 ELSE category END,
+			cost = CASE WHEN $7 THEN $8 ELSE cost END,
+			stock = CASE WHEN $9 THEN $10 ELSE stock END,
+			image_url = CASE WHEN $11 THEN $12 ELSE image_url END,
+			description = CASE WHEN $13 THEN $14 ELSE description END,
+			is_available = CASE WHEN $15 THEN $16 ELSE is_available END,
+			updated_at = NOW()
+		WHERE id = $17
+		RETURNING id, shop_id, master_product_id, name, price, category, cost, stock,
+		          image_url, description, is_available, created_at, updated_at
+	`
+	var updated models.Product
+	var createdAt, updatedAt time.Time
+	err = h.DB.QueryRow(query,
+		namePresent, p.Name,
+		pricePresent, p.Price,
+		categoryPresent, p.Category,
+		costPresent, p.Cost,
+		stockPresent, p.Stock,
+		imageUrlPresent, p.ImageURL,
+		descPresent, p.Description,
+		availPresent, p.IsAvailable,
+		productID,
+	).Scan(
+		&updated.ID, &updated.ShopID, &updated.MasterProductID,
+		&updated.Name, &updated.Price, &updated.Category,
+		&updated.Cost, &updated.Stock, &updated.ImageURL, &updated.Description, &updated.IsAvailable,
+		&createdAt, &updatedAt,
+	)
+	if err == sql.ErrNoRows {
+		jsonError(w, "Product not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		log.Printf("Error updating product: %v", err)
+		jsonError(w, "Error updating product", http.StatusInternalServerError)
+>>>>>>> refs/remotes/origin/main
 		return
 	}
 

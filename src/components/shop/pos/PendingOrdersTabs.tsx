@@ -44,7 +44,7 @@ const PendingOrdersTabs: FC<PendingOrdersTabsProps> = ({ orders, activeOrderId, 
                         <div className="d-flex align-items-center justify-content-between mb-1">
                             <div className="d-flex align-items-center gap-1">
                                 <Receipt size={13} />
-                                <span className="fw-bold small">Mesa {index + 1}</span>
+                                <span className="fw-bold small">Pedido {index + 1}</span>
                             </div>
                             {orderIds.length > 1 && (
                                 <button
