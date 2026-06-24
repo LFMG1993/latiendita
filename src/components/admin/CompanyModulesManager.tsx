@@ -1,12 +1,12 @@
 import {FC, useState} from 'react';
-import {Heladeria} from "../../types";
-import {updateShop} from "../../services/shopServices"; 
+import {Shop} from "../../types";
+import { updateShop } from "../../services/shop/tenantShopServices";
 import {navItemsConfig} from "../../config/navConfig";
 
 interface CompanyModulesManagerProps {
     show: boolean;
     onClose: () => void;
-    shop: Heladeria | null;
+    shop: Shop | null;
     onUpdate: () => void;
 }
 

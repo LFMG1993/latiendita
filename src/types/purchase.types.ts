@@ -1,4 +1,3 @@
-import { Timestamp } from "firebase/firestore";
 
 /**
  * Representa la carga útil (payload) de datos que se envía desde el formulario
@@ -36,7 +35,7 @@ export interface Purchase {
     internalInvoiceNumber: string;
     total: number;
     items: PurchaseItem[];
-    createdAt: Timestamp;
+    createdAt: string;
     purchasedByEmployeeId: string;
 }
 

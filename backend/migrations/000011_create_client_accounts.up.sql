@@ -3,7 +3,7 @@
 -- ==========================================
 CREATE TABLE debt_payment_requests (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    client_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    client_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     client_name VARCHAR(255) NOT NULL,
     client_phone VARCHAR(50),
     shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE,

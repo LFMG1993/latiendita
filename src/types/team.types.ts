@@ -1,4 +1,4 @@
-import {WorkSchedule, ScheduleException} from "./iceCreamShop.types";
+import {WorkSchedule, ScheduleException} from "./shop.types";
 
 /**
  * Representa un permiso individual en el sistema.

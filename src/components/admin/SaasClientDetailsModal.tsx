@@ -1,7 +1,7 @@
-import React, { FC, useState, useEffect } from 'react';
-import { UserProfile, Heladeria } from '../../types';
-import { getHeladeriasByUserId } from '../../services/userServices';
-import { approveShop } from '../../services/shopServices';
+import { FC, useState, useEffect } from 'react';
+import { UserProfile, Shop } from '../../types';
+import { getShopsByUserId } from "../../services/shop/tenantUserServices";
+import { approveShop } from "../../services/admin/adminShopServices";
 import { useToast } from '../../context/ToastContext';
 
 interface SaasClientDetailsModalProps {
@@ -12,14 +12,14 @@ interface SaasClientDetailsModalProps {
 
 export const SaasClientDetailsModal: FC<SaasClientDetailsModalProps> = ({ show, onClose, client }) => {
     const [activeTab, setActiveTab] = useState<'perfil' | 'tiendas' | 'pagos'>('perfil');
-    const [shops, setShops] = useState<Heladeria[]>([]);
+    const [shops, setShops] = useState<Shop[]>([]);
     const [loadingShops, setLoadingShops] = useState(false);
     const { showToast } = useToast();
 
     const fetchShops = async () => {
         setLoadingShops(true);
         try {
-            const data = await getHeladeriasByUserId(client!.id);
+            const data = await getShopsByUserId(client!.id);
             setShops(data);
         } catch (err) {
             console.error("Error fetching client shops:", err);
@@ -53,7 +53,7 @@ export const SaasClientDetailsModal: FC<SaasClientDetailsModalProps> = ({ show, 
     if (!show || !client) return null;
 
     return (
-        <div className="modal show d-block" tabIndex={-1} style={{backgroundColor: "rgba(0,0,0,0.5)"}}>
+        <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
             <div className="modal-dialog modal-dialog-centered modal-lg">
                 <div className="modal-content">
                     <div className="modal-header border-bottom-0 pb-0">
@@ -74,7 +74,7 @@ export const SaasClientDetailsModal: FC<SaasClientDetailsModalProps> = ({ show, 
                         {/* Tabs Navigation */}
                         <ul className="nav nav-tabs px-4 pt-3 border-bottom-0">
                             <li className="nav-item">
-                                <button 
+                                <button
                                     className={`nav-link fw-bold ${activeTab === 'perfil' ? 'active border-bottom-0' : 'text-muted border-transparent'}`}
                                     onClick={() => setActiveTab('perfil')}
                                 >
@@ -82,7 +82,7 @@ export const SaasClientDetailsModal: FC<SaasClientDetailsModalProps> = ({ show, 
                                 </button>
                             </li>
                             <li className="nav-item">
-                                <button 
+                                <button
                                     className={`nav-link fw-bold ${activeTab === 'tiendas' ? 'active border-bottom-0' : 'text-muted border-transparent'}`}
                                     onClick={() => setActiveTab('tiendas')}
                                 >
@@ -90,7 +90,7 @@ export const SaasClientDetailsModal: FC<SaasClientDetailsModalProps> = ({ show, 
                                 </button>
                             </li>
                             <li className="nav-item">
-                                <button 
+                                <button
                                     className={`nav-link fw-bold ${activeTab === 'pagos' ? 'active border-bottom-0' : 'text-muted border-transparent'}`}
                                     onClick={() => setActiveTab('pagos')}
                                 >
@@ -99,13 +99,13 @@ export const SaasClientDetailsModal: FC<SaasClientDetailsModalProps> = ({ show, 
                             </li>
                         </ul>
 
-                        <div className="p-4" style={{minHeight: '300px'}}>
+                        <div className="p-4" style={{ minHeight: '300px' }}>
                             {activeTab === 'perfil' && (
                                 <div className="row g-4">
                                     <div className="col-md-6">
                                         <div className="card h-100 shadow-sm border-secondary-subtle">
                                             <div className="card-body">
-                                                <h6 className="opacity-75 fw-bold text-uppercase mb-3" style={{fontSize: '0.8rem'}}>Datos de Contacto</h6>
+                                                <h6 className="opacity-75 fw-bold text-uppercase mb-3" style={{ fontSize: '0.8rem' }}>Datos de Contacto</h6>
                                                 <p className="mb-2"><strong>ID Sistema:</strong> {client.id}</p>
                                                 <p className="mb-2"><strong>Documento:</strong> {client.identify} {client.documentId || 'No registrado'}</p>
                                                 <p className="mb-2"><strong>Teléfono:</strong> {client.phone || 'No registrado'}</p>
@@ -130,7 +130,7 @@ export const SaasClientDetailsModal: FC<SaasClientDetailsModalProps> = ({ show, 
                                     <div className="d-flex justify-content-between align-items-center mb-3">
                                         <h6 className="fw-bold mb-0">Tiendas Asociadas a la Cuenta</h6>
                                     </div>
-                                    
+
                                     {loadingShops ? (
                                         <div className="text-center py-4 text-muted">Cargando tiendas...</div>
                                     ) : shops.length === 0 ? (
@@ -141,36 +141,36 @@ export const SaasClientDetailsModal: FC<SaasClientDetailsModalProps> = ({ show, 
                                         <div className="table-responsive">
                                             <table className="table table-sm table-hover align-middle">
                                                 <thead className="border-bottom">
-                                                        <tr>
-                                                            <th>Nombre de Tienda</th>
-                                                            <th>Dirección</th>
-                                                            <th>Estado</th>
-                                                            <th>Acciones</th>
+                                                    <tr>
+                                                        <th>Nombre de Tienda</th>
+                                                        <th>Dirección</th>
+                                                        <th>Estado</th>
+                                                        <th>Acciones</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {shops.map(shop => (
+                                                        <tr key={shop.id}>
+                                                            <td className="fw-bold">{shop.name}</td>
+                                                            <td className="small text-muted">{shop.address || '-'}</td>
+                                                            <td>
+                                                                {shop.status === 'pending' ? (
+                                                                    <span className="badge bg-warning text-dark">Pendiente</span>
+                                                                ) : (
+                                                                    <span className="badge bg-success">Activa</span>
+                                                                )}
+                                                            </td>
+                                                            <td>
+                                                                {shop.status === 'pending' && (
+                                                                    <button
+                                                                        className="btn btn-sm btn-outline-success fw-bold"
+                                                                        onClick={() => handleApproveShop(shop.id)}
+                                                                    >
+                                                                        Aprobar
+                                                                    </button>
+                                                                )}
+                                                            </td>
                                                         </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {shops.map(shop => (
-                                                            <tr key={shop.id}>
-                                                                <td className="fw-bold">{shop.name}</td>
-                                                                <td className="small text-muted">{shop.address || '-'}</td>
-                                                                <td>
-                                                                    {shop.status === 'pending' ? (
-                                                                        <span className="badge bg-warning text-dark">Pendiente</span>
-                                                                    ) : (
-                                                                        <span className="badge bg-success">Activa</span>
-                                                                    )}
-                                                                </td>
-                                                                <td>
-                                                                    {shop.status === 'pending' && (
-                                                                        <button 
-                                                                            className="btn btn-sm btn-outline-success fw-bold"
-                                                                            onClick={() => handleApproveShop(shop.id)}
-                                                                        >
-                                                                            Aprobar
-                                                                        </button>
-                                                                    )}
-                                                                </td>
-                                                            </tr>
                                                     ))}
                                                 </tbody>
                                             </table>
@@ -185,7 +185,7 @@ export const SaasClientDetailsModal: FC<SaasClientDetailsModalProps> = ({ show, 
                                         <div className="d-flex align-items-center">
                                             <i className="bi bi-info-circle-fill fs-4 me-3"></i>
                                             <div>
-                                                <strong>Módulo en Construcción</strong><br/>
+                                                <strong>Módulo en Construcción</strong><br />
                                                 <span className="small">Esta sección es un prototipo visual. Las funciones de facturación SaaS se conectarán en la siguiente fase de desarrollo.</span>
                                             </div>
                                         </div>
@@ -221,7 +221,7 @@ export const SaasClientDetailsModal: FC<SaasClientDetailsModalProps> = ({ show, 
                                                         <li className="list-group-item d-flex justify-content-between align-items-center px-3 py-2">
                                                             <div>
                                                                 <div className="fw-bold small">Nov 2026</div>
-                                                                <div className="text-muted" style={{fontSize: '0.75rem'}}>Suscripción Básico</div>
+                                                                <div className="text-muted" style={{ fontSize: '0.75rem' }}>Suscripción Básico</div>
                                                             </div>
                                                             <span className="badge bg-success bg-opacity-10 text-success rounded-pill">$25.00</span>
                                                         </li>

@@ -6,9 +6,9 @@ CREATE TABLE sales (
     shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
     session_id UUID REFERENCES cash_sessions(id) ON DELETE SET NULL,
     total NUMERIC(12, 2) NOT NULL,
-    employee_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    employee_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
     employee_name VARCHAR(255) NOT NULL,
-    client_id VARCHAR(255) REFERENCES users(id) ON DELETE SET NULL,
+    client_id UUID REFERENCES users(id) ON DELETE SET NULL,
     client_name VARCHAR(255),
     pending_debt NUMERIC(12, 2) DEFAULT 0.00,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

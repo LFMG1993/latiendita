@@ -1,4 +1,3 @@
-import { Timestamp } from "firebase/firestore";
 
 export interface PromotionItem {
     productId: string;
@@ -17,7 +16,7 @@ export interface Promotion {
     isEnabled: boolean; // Para activar o desactivar la promoción
     cost?: number; // Costo total calculado de los productos (denormalizado)
     profit?: number; // Ganancia calculada (denormalizado)
-    createdAt: Timestamp;
+    createdAt: string;
 }
 
 export type NewPromotionData = Omit<Promotion, 'id' | 'createdAt'>;

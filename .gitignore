@@ -30,5 +30,4 @@ dist-ssr
 # Firebase
 .firebaserc
 
-# Package locks (forcing pnpm)
-package-lock.json
+/scripts

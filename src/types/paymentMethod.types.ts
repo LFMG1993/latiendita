@@ -1,4 +1,3 @@
-import { Timestamp } from "firebase/firestore";
 
 export interface PaymentMethod {
     id: string;
@@ -6,7 +5,7 @@ export interface PaymentMethod {
     type: 'cash' | 'electronic' | 'credit'; // 'cash' afecta la caja, 'electronic' no, 'credit' suma deuda al cliente.
     enabled: boolean; // Para poder activarlo o desactivarlo
     accountDetails?: string; // Para mostrar números de Nequi o cuenta
-    createdAt: Timestamp;
+    createdAt: string;
 }
 
 export type NewPaymentMethodData = Omit<PaymentMethod, 'id' | 'createdAt'>;

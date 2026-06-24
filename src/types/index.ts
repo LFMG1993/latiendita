@@ -1,4 +1,4 @@
-export * from './iceCreamShop.types';
+export * from './shop.types';
 export * from './user.types';
 export * from './auth.types';
 export * from './product.types';

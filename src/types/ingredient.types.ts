@@ -1,4 +1,3 @@
-import {Timestamp} from "firebase/firestore";
 
 export interface Ingredient {
     id: string;
@@ -8,8 +7,8 @@ export interface Ingredient {
     consumptionUnit: string;   // La unidad que usas en las recetas. Ejemplo: 'gramo'
     consumptionUnitsPerPurchaseUnit: number;// Cuántas 'consumptionUnit' hay en una 'purchaseUnit'. Ejemplo: 4900 (gramos por caja)
     stock: number;
-    createdAt: Timestamp;
-    updatedAt?: Timestamp;
+    createdAt: string;
+    updatedAt?: string;
 }
 
 export interface EnrichedIngredient extends Ingredient {

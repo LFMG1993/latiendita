@@ -1,4 +1,3 @@
-import {Timestamp} from "firebase/firestore";
 import {PublicProduct} from "./public.types";
 
 export type OrderStatus = 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
@@ -24,8 +23,8 @@ export interface Order {
     status: OrderStatus;
     paymentMethod: PaymentMethodType;
     
-    createdAt: Timestamp;
-    updatedAt?: Timestamp;
+    createdAt: string;
+    updatedAt?: string;
     
     // Campos para sistema de crédito refinado
     usedCredits?: number;    // Monto cubierto por "Saldo a Favor" al momento del pedido

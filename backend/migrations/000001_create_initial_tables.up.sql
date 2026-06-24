@@ -16,15 +16,13 @@ CREATE TABLE business_types (
 -- 1. USERS & PROFILES / USUARIOS Y PERFILES
 -- ==========================================
 CREATE TABLE users (
-    id VARCHAR(255) PRIMARY KEY, -- Auth system ID (Firebase UID) / ID del sistema de autenticación (Firebase UID)
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- System User ID / ID del usuario en el sistema
     first_name VARCHAR(100) NOT NULL, -- First name of the user / Nombre del usuario
     last_name VARCHAR(100) NOT NULL, -- Last name of the user / Apellido del usuario
     email VARCHAR(255) UNIQUE NOT NULL, -- Email address / Dirección de correo electrónico
     identify VARCHAR(50), -- Document type or generic document number / Tipo de documento o número genérico
     document_id VARCHAR(50), -- Client identity card number / Número de cédula o documento del cliente
     phone VARCHAR(50), -- Contact phone number / Teléfono de contacto
-    role VARCHAR(50) DEFAULT 'client' CHECK (role IN ('owner', 'employee', 'superAdmin', 'client')), -- System-wide user role / Rol global de usuario en el sistema
-    role_id UUID, -- Global role ID if using custom roles / ID del rol global si se usan roles personalizados
     photo_url TEXT, -- Profile picture URL / URL de la foto de perfil
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, -- Account creation date / Fecha de creación de la cuenta
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP -- Account last update date / Fecha de última actualización de la cuenta

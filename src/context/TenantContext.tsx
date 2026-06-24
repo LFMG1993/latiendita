@@ -41,35 +41,35 @@ const TenantContext = createContext<TenantContextType>({
 export const useTenant = () => useContext(TenantContext);
 
 export const TenantProvider: FC<PropsWithChildren> = ({children}) => {
-    const {activeIceCreamShop} = useAuthStore();
+    const {activeShop} = useAuthStore();
 
     const tenant = useMemo(() => {
-        if (!activeIceCreamShop) {
+        if (!activeShop) {
             return defaultTenantConfig;
         }
 
         return {
             theme: {
-                primaryColor: activeIceCreamShop.theme?.primaryColor || defaultTenantConfig.theme.primaryColor,
-                secondaryColor: activeIceCreamShop.theme?.secondaryColor || defaultTenantConfig.theme.secondaryColor,
-                logoURL: activeIceCreamShop.theme?.logoURL,
+                primaryColor: activeShop.theme?.primaryColor || defaultTenantConfig.theme.primaryColor,
+                secondaryColor: activeShop.theme?.secondaryColor || defaultTenantConfig.theme.secondaryColor,
+                logoURL: activeShop.theme?.logoURL,
             },
             terminology: {
-                shopLabel: activeIceCreamShop.terminology?.shopLabel || 'Heladería',
-                shopLabelPlural: activeIceCreamShop.terminology?.shopLabel ? activeIceCreamShop.terminology.shopLabel + 's' : 'Heladerías', // Simple pluralization fallback
-                productLabel: activeIceCreamShop.terminology?.productLabel || 'Producto',
+                shopLabel: activeShop.terminology?.shopLabel || 'Heladería',
+                shopLabelPlural: activeShop.terminology?.shopLabel ? activeShop.terminology.shopLabel + 's' : 'Heladerías', // Simple pluralization fallback
+                productLabel: activeShop.terminology?.productLabel || 'Producto',
             },
         };
-    }, [activeIceCreamShop]);
+    }, [activeShop]);
 
     // Actualizar document.title
     useEffect(() => {
-        if (activeIceCreamShop?.name) {
-            document.title = `${activeIceCreamShop.name} - Gestión`;
+        if (activeShop?.name) {
+            document.title = `${activeShop.name} - Gestión`;
         } else {
             document.title = "Mi Tienda - Gestión";
         }
-    }, [activeIceCreamShop]);
+    }, [activeShop]);
     
     // Aquí podríamos inyectar variables de CSS si quisiéramos cambiar el color globalmente
     useEffect(() => {

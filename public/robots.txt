@@ -1,21 +1,29 @@
-# Permitir a todos los buscadores rastrear el sitio
 User-agent: *
 Allow: /
+Allow: /login
+Allow: /register
+Allow: /catalogo
 
-# No rastrear las secciones internas de la aplicación
-Disallow: /employee-claim
+# Disallow private paths to prevent crawling of internal application states
 Disallow: /dashboard
-Disallow: /ingredients-page
-Disallow: /ice-cream-shop
-Disallow: /profile
-Disallow: /products
-Disallow: /purchases
-Disallow: /team-management
-Disallow: /suppliers
 Disallow: /pos
-Disallow: /reports
+Disallow: /orders
+Disallow: /clients
+Disallow: /debt-payments
 Disallow: /cash-session
+Disallow: /products
+Disallow: /ingredients-page
+Disallow: /purchases
+Disallow: /suppliers
+Disallow: /reports
+Disallow: /expenses
+Disallow: /promotions
+Disallow: /team-management
 Disallow: /settings
 
-# Ubicación del Sitemap
-Sitemap: https://congelados.pages.dev/sitemap.xml
+# LLM Crawler specific (OpenAI, Anthropic, etc.)
+User-agent: GPTBot
+Allow: /
+Allow: /llms.txt
+
+Sitemap: https://latiendita.pages.dev/sitemap.xml

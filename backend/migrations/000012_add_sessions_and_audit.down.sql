@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS audit.logs;
+DROP SCHEMA IF EXISTS audit CASCADE;
+
+DROP TABLE IF EXISTS login_attempts;
+DROP TABLE IF EXISTS sessions;

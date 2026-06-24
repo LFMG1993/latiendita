@@ -1,162 +1,60 @@
 package main
 
 import (
-	"database/sql"
+	"backend/core/config"
+	"backend/core/database"
+	"backend/core/middlewares"
+	"backend/handlers"
+	"backend/repositories"
+	"backend/services"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"time"
-
-	"backend/handlers"
-
-	"github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
-	_ "github.com/lib/pq"
 )
 
-// Config holds the application configuration loaded from environment variables
-// Config almacena la configuración de la aplicación cargada desde variables de entorno
-type Config struct {
-	Port       string
-	DBHost     string
-	DBPort     string
-	DBUser     string
-	DBPassword string
-	DBName     string
-	DBSSLMode  string
-}
-
-func loadConfig() Config {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-	dbHost := os.Getenv("DB_HOST")
-	if dbHost == "" {
-		dbHost = "db"
-	}
-	dbPort := os.Getenv("DB_PORT")
-	if dbPort == "" {
-		dbPort = "5432"
-	}
-	dbUser := os.Getenv("DB_USER")
-	if dbUser == "" {
-		dbUser = "postgres"
-	}
-	dbPassword := os.Getenv("DB_PASSWORD")
-	if dbPassword == "" {
-		dbPassword = "postgrespassword"
-	}
-	dbName := os.Getenv("DB_NAME")
-	if dbName == "" {
-		dbName = "latiendita"
-	}
-	dbSSLMode := os.Getenv("DB_SSLMODE")
-	if dbSSLMode == "" {
-		dbSSLMode = "disable"
-	}
-
-	return Config{
-		Port:       port,
-		DBHost:     dbHost,
-		DBPort:     dbPort,
-		DBUser:     dbUser,
-		DBPassword: dbPassword,
-		DBName:     dbName,
-		DBSSLMode:  dbSSLMode,
-	}
-}
-
-func runDBMigrations(db *sql.DB) {
-	driver, err := postgres.WithInstance(db, &postgres.Config{})
-	if err != nil {
-		log.Fatalf("Could not create migration driver / No se pudo crear el driver de migración: %v", err)
-	}
-
-	m, err := migrate.NewWithDatabaseInstance(
-		"file://migrations",
-		"postgres", driver)
-	if err != nil {
-		log.Fatalf("Could not create migrate instance / No se pudo crear la instancia de migración: %v", err)
-	}
-
-	log.Println("Running database migrations... / Ejecutando migraciones de base de datos...")
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		log.Fatalf("Could not run up migrations / No se pudieron ejecutar las migraciones: %v", err)
-	}
-	log.Println("Migrations applied successfully / Migraciones aplicadas con éxito")
-}
-
-// corsMiddleware injects CORS headers and logs incoming requests
-// corsMiddleware inyecta cabeceras CORS y registra las peticiones entrantes
-func corsMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("HTTP Request: %s %s", r.Method, r.URL.Path)
-
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-
-		// Handle preflight OPTIONS requests / Manejar solicitudes preflight de OPTIONS
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
-}
-
 func main() {
-	config := loadConfig()
+	cfg := config.LoadConfig()
 
-	// Build the PostgreSQL connection string
-	// Construir la cadena de conexión de PostgreSQL
-	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		config.DBHost, config.DBPort, config.DBUser, config.DBPassword, config.DBName, config.DBSSLMode)
-
-	log.Printf("Connecting to database at %s:%s...", config.DBHost, config.DBPort)
-
-	var db *sql.DB
-	var err error
-
-	// Retry connecting to the database in case it's still starting up
-	// Reintentar conectar a la base de datos por si aún se está iniciando
-	for i := 1; i <= 5; i++ {
-		db, err = sql.Open("postgres", connStr)
-		if err == nil {
-			err = db.Ping()
-		}
-		if err == nil {
-			break
-		}
-		log.Printf("[Attempt %d/5] Database not ready yet, retrying in 2 seconds...", i)
-		time.Sleep(2 * time.Second)
-	}
-
+	db, err := database.ConnectDB(cfg)
 	if err != nil {
-		log.Fatalf("Could not connect to the database: %v", err)
+		log.Fatalf("Failed to initialize database: %v", err)
 	}
 	defer db.Close()
 
-	log.Println("Successfully connected to the database / Conexión exitosa a la base de datos")
+	// Initialize repositories
+	userRepo := repositories.NewUserRepository(db)
+	shopRepo := repositories.NewShopRepository(db)
+	productRepo := repositories.NewProductRepository(db)
+	cashSessionRepo := repositories.NewCashSessionRepository(db)
+	saleRepo := repositories.NewSaleRepository(db)
+	orderRepo := repositories.NewOrderRepository(db)
+	paymentMethodRepo := repositories.NewPaymentMethodRepository(db)
+	supplierRepo := repositories.NewSupplierRepository(db)
+	sessionRepo := repositories.NewSessionRepository(db)
 
-	// Execute migrations automatically / Ejecutar migraciones automáticamente
-	runDBMigrations(db)
+	// Initialize services
+	userService := services.NewUserService(userRepo)
+	shopService := services.NewShopService(shopRepo)
+	productService := services.NewProductService(productRepo)
+	cashSessionService := services.NewCashSessionService(cashSessionRepo)
+	saleService := services.NewSaleService(saleRepo)
+	orderService := services.NewOrderService(orderRepo)
+	paymentMethodService := services.NewPaymentMethodService(paymentMethodRepo)
+	supplierService := services.NewSupplierService(supplierRepo)
+	authService := services.NewAuthService(userRepo, sessionRepo, cfg)
 
 	// Initialize handlers / Inicializar controladores
-	userHandler := handlers.NewUserHandler(db)
-	shopHandler := handlers.NewShopHandler(db)
-	productHandler := handlers.NewProductHandler(db)
-	supplierHandler := handlers.NewSupplierHandler(db)
-	paymentMethodHandler := handlers.NewPaymentMethodHandler(db)
-	cashSessionHandler := handlers.NewCashSessionHandler(db)
-	saleHandler := handlers.NewSaleHandler(db)
-	orderHandler := handlers.NewOrderHandler(db)
+	userHandler := handlers.NewUserHandler(userService)
+	shopHandler := handlers.NewShopHandler(shopService)
+	productHandler := handlers.NewProductHandler(productService)
+	supplierHandler := handlers.NewSupplierHandler(supplierService)
+	paymentMethodHandler := handlers.NewPaymentMethodHandler(paymentMethodService)
+	cashSessionHandler := handlers.NewCashSessionHandler(cashSessionService)
+	saleHandler := handlers.NewSaleHandler(saleService)
+	orderHandler := handlers.NewOrderHandler(orderService)
+	authHandler := handlers.NewAuthHandler(authService)
 
 	// Router setup
 	// Configuración del enrutador
@@ -174,7 +72,7 @@ func main() {
 
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		
+
 		dbStatus := "healthy"
 		if err := db.Ping(); err != nil {
 			dbStatus = "unhealthy"
@@ -193,7 +91,12 @@ func main() {
 	// User registration and login routes / Rutas para registro y login de usuarios
 	mux.HandleFunc("/api/users", userHandler.RegisterUser)
 	mux.HandleFunc("/api/register-saas", userHandler.RegisterSaaS)
-	mux.HandleFunc("/api/login", userHandler.LoginUser)
+	mux.HandleFunc("/api/login", authHandler.Login)
+	mux.HandleFunc("/api/logout", authHandler.Logout)
+
+	// Protected routes using AuthMiddleware
+	authMiddleware := middlewares.AuthMiddleware(authService)
+	mux.Handle("/api/me", authMiddleware(http.HandlerFunc(userHandler.GetMe)))
 
 	// Shop routes / Rutas de tiendas
 	// POST /api/shops         → Crear tienda
@@ -208,8 +111,6 @@ func main() {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
-
-
 
 	// GET /api/admin/owners -> Listar todos los dueños (SuperAdmin)
 	mux.HandleFunc("/api/admin/owners", func(w http.ResponseWriter, r *http.Request) {
@@ -489,10 +390,14 @@ func main() {
 		}
 	})
 
-
-	serverAddr := ":" + config.Port
+	serverAddr := ":" + cfg.Port
 	log.Printf("Server listening on %s / Servidor escuchando en %s", serverAddr, serverAddr)
-	if err := http.ListenAndServe(serverAddr, corsMiddleware(mux)); err != nil {
+
+	// Chain middlewares
+	handler := middlewares.CorsMiddleware(mux)
+	handler = middlewares.RecoveryMiddleware(cfg.AppDebug)(handler)
+
+	if err := http.ListenAndServe(serverAddr, handler); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}
 }

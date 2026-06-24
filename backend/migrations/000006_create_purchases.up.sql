@@ -23,7 +23,7 @@ CREATE TABLE purchases (
     invoice_number VARCHAR(100),
     internal_invoice_number VARCHAR(100) NOT NULL,
     total NUMERIC(12, 2) NOT NULL,
-    purchased_by_employee_id VARCHAR(255) REFERENCES users(id) ON DELETE RESTRICT,
+    purchased_by_employee_id UUID REFERENCES users(id) ON DELETE RESTRICT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (shop_id, internal_invoice_number)
 );

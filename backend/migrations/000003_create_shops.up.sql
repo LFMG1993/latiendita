@@ -7,7 +7,7 @@ CREATE TABLE shops (
     address TEXT,
     photo_url TEXT,
     whatsapp VARCHAR(50),
-    owner_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
     timezone VARCHAR(100) DEFAULT 'America/Bogota' NOT NULL,
     business_type_id UUID REFERENCES business_types(id) ON DELETE SET NULL,
     -- Branding / Theme
@@ -29,7 +29,7 @@ CREATE TABLE shops (
 -- ==========================================
 CREATE TABLE shop_members (
     shop_id UUID REFERENCES shops(id) ON DELETE CASCADE,
-    user_id VARCHAR(255) REFERENCES users(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     role_id UUID,
     role VARCHAR(50) NOT NULL CHECK (role IN ('owner', 'employee')),
     permissions JSONB DEFAULT '{}'::jsonb,
@@ -41,7 +41,7 @@ CREATE TABLE shop_members (
 CREATE TABLE work_schedules (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
-    user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     day_of_week INT NOT NULL CHECK (day_of_week BETWEEN 0 AND 6),
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
@@ -52,7 +52,7 @@ CREATE TABLE work_schedules (
 CREATE TABLE schedule_exceptions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
-    user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     exception_date DATE NOT NULL,
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
@@ -63,7 +63,7 @@ CREATE TABLE schedule_exceptions (
 -- Tabla de cuentas de cliente por tienda (créditos y fiados)
 CREATE TABLE client_shop_accounts (
     shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
-    client_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    client_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     credits NUMERIC(12, 2) DEFAULT 0.00,
     debt NUMERIC(12, 2) DEFAULT 0.00,
     is_credit_enabled BOOLEAN DEFAULT FALSE,

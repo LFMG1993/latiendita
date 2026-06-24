@@ -1,35 +1,34 @@
-import {create} from 'zustand';
-import {AuthStoreState, Heladeria} from "../types";
+import { create } from 'zustand';
+import { AuthStoreState, Shop } from "../types";
 
 export const useAuthStore = create<AuthStoreState>((set) => ({
     user: null,
     isAuthenticated: false,
     loading: true,
-    activeIceCreamShopId: null,
-    activeIceCreamShop: null,
-    iceCreamShops: [],
-    setAuthUser: (user) => set({user, isAuthenticated: !!user}),
-    setUserIceCreamShop: (nuevasHeladerias: Heladeria[]) => set(state => {
-        const newActiveId = state.activeIceCreamShopId || (nuevasHeladerias.length > 0 ? nuevasHeladerias[0].id : null);
-        const newActiveShop = nuevasHeladerias.find(shop => shop.id === newActiveId) || null;
+    activeShopId: null,
+    activeShop: null,
+    shops: [],
+    setAuthUser: (user) => set({ user, isAuthenticated: !!user }),
+    setUserShop: (nuevasShops: Shop[]) => set(state => {
+        const newActiveId = state.activeShopId || (nuevasShops.length > 0 ? nuevasShops[0].id : null);
+        const newActiveShop = nuevasShops.find(shop => shop.id === newActiveId) || null;
         return {
-            iceCreamShops: nuevasHeladerias,
-            activeIceCreamShopId: newActiveId,
-            activeIceCreamShop: newActiveShop, // <-- 2. Actualizamos la heladería activa cuando la lista cambia
+            shops: nuevasShops,
+            activeShopId: newActiveId,
+            activeShop: newActiveShop,
         };
     }),
-    setActiveIceCreamShopId: (heladeriaId: string | null) => set(state => ({
-        activeIceCreamShopId: heladeriaId,
-        activeIceCreamShop: state.iceCreamShops.find(shop => shop.id === heladeriaId) || null, // <-- 3. Actualizamos la heladería activa cuando el ID cambia
+    setActiveShopId: (shopId: string | null) => set(state => ({
+        activeShopId: shopId,
+        activeShop: state.shops.find(shop => shop.id === shopId) || null,
     })),
-    setLoading: (isLoading) => set({loading: isLoading}),
+    setLoading: (isLoading) => set({ loading: isLoading }),
 
-    // Metodo Logout
     logout: () => set({
         user: null,
         isAuthenticated: false,
-        iceCreamShops: [],
-        activeIceCreamShopId: null,
-        activeIceCreamShop: null,
+        shops: [],
+        activeShopId: null,
+        activeShop: null,
     }),
 }));

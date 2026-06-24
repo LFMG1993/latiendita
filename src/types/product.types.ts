@@ -1,4 +1,3 @@
-import {Timestamp} from "firebase/firestore";
 
 // Define un solo ingrediente dentro de la receta de un producto.
 export interface RecipeItem {
@@ -16,8 +15,8 @@ export interface Product {
     recipe: RecipeItem[];
     cost?: number;
     stock?: number;
-    createdAt: Timestamp;
-    updatedAt?: Timestamp;
+    createdAt: string;
+    updatedAt?: string;
 }
 
 // Tipo para los datos al crear un nuevo producto

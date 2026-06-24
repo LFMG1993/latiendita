@@ -1,6 +1,6 @@
 import React, { FC, useEffect, useState } from 'react';
 import { UserProfile } from '../../types';
-import { getAllOwners } from '../../services/userServices';
+import { getAllOwners } from "../../services/admin/adminUserServices";
 import { SaasClientDetailsModal } from '../../components/admin/SaasClientDetailsModal';
 
 export const SaasClientsPage: FC = () => {

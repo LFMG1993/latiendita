@@ -1,4 +1,3 @@
-import { Timestamp } from "firebase/firestore";
 
 export interface DebtPaymentRequest {
     id: string;
@@ -11,8 +10,8 @@ export interface DebtPaymentRequest {
     paymentMethodName: string;
     voucherNumber: string;
     status: 'pending' | 'approved' | 'rejected';
-    createdAt: Timestamp;
-    updatedAt?: Timestamp;
+    createdAt: string;
+    updatedAt?: string;
     notes?: string; // Optional notes from admin
 }
 

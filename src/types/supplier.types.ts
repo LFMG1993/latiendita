@@ -1,4 +1,3 @@
-import { Timestamp } from "firebase/firestore";
 
 export interface Supplier {
     id: string;
@@ -7,7 +6,7 @@ export interface Supplier {
     phone?: string;
     email?: string;
     purchaseCount?: number;
-    createdAt: Timestamp;
+    createdAt: string;
 }
 
 export type NewSupplierData = Omit<Supplier, 'id' | 'createdAt'>;

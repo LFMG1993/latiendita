@@ -1,0 +1,14 @@
+# Acerca de La Tiendita POS
+
+La Tiendita POS es un sistema de punto de venta (POS) y facturación en la nube diseñado específicamente para pequeños y medianos comercios en Colombia (minimarkets, tiendas de barrio, misceláneas, etc.).
+
+## Nuestro Modelo de Negocio (SaaS Freemium)
+Nuestra misión es ayudar a la digitalización del comercio local.
+- **Nivel Gratuito (Freemium)**: Ofrecemos funciones esenciales sin costo para emprendedores que apenas comienzan. Esto incluye registro de ventas, control de inventario básico y reportes simples.
+- **Nivel PRO (Premium)**: Para negocios en crecimiento, ofrecemos una pequeña suscripción (mensual o anual) que desbloquea funciones avanzadas como gestión multicaja, control avanzado de permisos para múltiples empleados, reportes detallados y módulos financieros.
+
+## Creadores
+La Tiendita POS es un producto desarrollado y diseñado por **Molink Tecnología**, una agencia de desarrollo de software con sede en Colombia especializada en la creación de plataformas SaaS, aplicaciones móviles y tiendas virtuales.
+
+## Audiencia Objetivo
+Dirigido a emprendedores, tenderos y dueños de pequeños comercios en Colombia que buscan organizar sus finanzas e inventario sin la complejidad ni los altos costos del software tradicional de caja registradora.

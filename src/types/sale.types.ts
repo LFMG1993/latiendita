@@ -1,4 +1,3 @@
-import { Timestamp } from "firebase/firestore";
 
 /**
  * Representa un ingrediente específico y su cantidad tal como se usó en una venta.
@@ -36,7 +35,7 @@ export interface Sale {
     total: number;
     items: SaleItem[];
     payments: SalePayment[];
-    createdAt: Timestamp;
+    createdAt: string;
     employeeId: string; // UID del empleado que hizo la venta
     employeeName: string; // Nombre de normalizado para fácil visualización
     

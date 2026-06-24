@@ -1,16 +1,16 @@
 import {FC, useEffect, useState} from 'react';
-import {Heladeria} from '../../types';
+import {Shop} from '../../types';
 import {CompanyModulesManager} from '../../components/admin/CompanyModulesManager';
-import {getAllShops, createShop, approveShop} from '../../services/shopServices';
-import {getAllOwners} from '../../services/userServices';
+import { getAllShops, createShop, approveShop } from "../../services/admin/adminShopServices";
+import { getAllOwners } from "../../services/admin/adminUserServices";
 import {UserProfile} from '../../types';
 import {useToast} from '../../context/ToastContext';
 
 export const SuperAdminDashboard: FC = () => {
-    const [shops, setShops] = useState<Heladeria[]>([]);
+    const [shops, setShops] = useState<Shop[]>([]);
     const [owners, setOwners] = useState<UserProfile[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedShop, setSelectedShop] = useState<Heladeria | null>(null);
+    const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
     const [showManager, setShowManager] = useState(false);
     
     // States for creating a shop
@@ -48,7 +48,7 @@ export const SuperAdminDashboard: FC = () => {
         fetchShopsAndOwners();
     }, []);
 
-    const handleManageModules = (shop: Heladeria) => {
+    const handleManageModules = (shop: Shop) => {
         setSelectedShop(shop);
         setShowManager(true);
     };
@@ -88,7 +88,7 @@ export const SuperAdminDashboard: FC = () => {
             fetchShopsAndOwners(); // Refrescar la tabla
         } catch (error: any) {
             console.error("Error approving shop:", error);
-            showToast(error.message || "Error al aprobar la tienda", "error");
+            showToast(error.message || "Error al aprobar la tienda", "danger");
         }
     };
 
@@ -130,7 +130,7 @@ export const SuperAdminDashboard: FC = () => {
                                         const disabledCount = Object.values(shop.modules || {}).filter(v => v === false).length;
                                         const statusColor = disabledCount === 0 ? 'success' : 'warning';
                                         
-                                        const ownerObj = owners.find(o => o.id === shop.owner);
+                                        const ownerObj = owners.find(o => o.uid === shop.owner);
                                         const ownerName = ownerObj ? `${ownerObj.firstName} ${ownerObj.lastName || ''}`.trim() : shop.owner;
                                         
                                         return (
@@ -215,7 +215,7 @@ export const SuperAdminDashboard: FC = () => {
                                         >
                                             <option value="">-- Seleccionar Dueño --</option>
                                             {owners.map(owner => (
-                                                <option key={owner.id} value={owner.id}>
+                                                <option key={owner.uid} value={owner.uid}>
                                                     {owner.firstName} {owner.lastName} ({owner.email})
                                                 </option>
                                             ))}

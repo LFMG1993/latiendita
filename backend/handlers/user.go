@@ -1,314 +1,65 @@
 package handlers
 
 import (
-	"crypto/rand"
-	"database/sql"
 	"encoding/json"
-	"fmt"
-	"log"
 	"net/http"
 	"strings"
-	"time"
 
+	"backend/core/middlewares"
 	"backend/models"
-
-	"golang.org/x/crypto/bcrypt"
+	"backend/services"
 )
 
 // UserHandler handles user-related HTTP requests
-// UserHandler maneja las solicitudes HTTP relacionadas con los usuarios
 type UserHandler struct {
-	DB *sql.DB
+	userService *services.UserService
 }
 
 // NewUserHandler creates a new instance of UserHandler
-// NewUserHandler crea una nueva instancia de UserHandler
-func NewUserHandler(db *sql.DB) *UserHandler {
-	return &UserHandler{DB: db}
+func NewUserHandler(userService *services.UserService) *UserHandler {
+	return &UserHandler{userService: userService}
 }
 
-// generateUUID generates a standard RFC4122 UUIDv4 using crypto/rand
-// generateUUID genera un UUIDv4 estándar RFC4122 usando crypto/rand
-func generateUUID() string {
-	b := make([]byte, 16)
-	_, err := rand.Read(b)
-	if err != nil {
-		log.Printf("Error generating UUID: %v", err)
-		return ""
-	}
-	// Set the version (4) and variant (RFC4122)
-	b[6] = (b[6] & 0x0f) | 0x40
-	b[8] = (b[8] & 0x3f) | 0x80
-	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
-}
-
-// RegisterUser handles POST /api/users to register a new user in the database
-// RegisterUser maneja POST /api/users para registrar un nuevo usuario en la base de datos
+// RegisterUser handles POST /api/users to register a new user
 func (h *UserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
-	// Only allow POST method / Solo permitir el método POST
 	if r.Method != http.MethodPost {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Method not allowed / Método no permitido"})
+		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	var user models.User
-	err := json.NewDecoder(r.Body).Decode(&user)
-	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid JSON format / Formato de JSON inválido"})
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		jsonError(w, "Invalid JSON format", http.StatusBadRequest)
 		return
 	}
 
-	// Clean inputs / Limpiar entradas
-	user.Email = strings.TrimSpace(strings.ToLower(user.Email))
-	user.FirstName = strings.TrimSpace(user.FirstName)
-	user.LastName = strings.TrimSpace(user.LastName)
-	user.Password = strings.TrimSpace(user.Password)
-
-	// Validation / Validación
-	if user.Email == "" || user.FirstName == "" || user.LastName == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Missing required fields (email, first_name, last_name) / Faltan campos requeridos"})
-		return
-	}
-
-	if user.Password == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Password is required / La contraseña es requerida"})
-		return
-	}
-
-	if len(user.Password) < 6 {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Password must be at least 6 characters / La contraseña debe tener al menos 6 caracteres"})
-		return
-	}
-
-	// Hash the password / Cifrar la contraseña
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if err != nil {
-		log.Printf("Error hashing password: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error / Error interno del servidor"})
-		return
-	}
-	user.PasswordHash = string(hashedPassword)
-
-	// If ID is not provided, generate a new UUID / Si el ID no es proporcionado, generar un nuevo UUID
-	if strings.TrimSpace(user.ID) == "" {
-		user.ID = generateUUID()
-	}
-
-	// Set default role / Establecer rol por defecto
-	if strings.TrimSpace(user.Role) == "" {
-		user.Role = "client"
-	}
-
-	// Validate role constraint / Validar restricción de rol
-	validRoles := map[string]bool{
-		"owner":      true,
-		"employee":   true,
-		"superAdmin": true,
-		"client":     true,
-	}
-	if !validRoles[user.Role] {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid role. Must be 'owner', 'employee', 'superAdmin' or 'client' / Rol inválido"})
-		return
-	}
-
-	// SQL Insertion query / Consulta SQL de inserción
-	query := `
-		INSERT INTO users (id, first_name, last_name, email, identify, document_id, phone, role, role_id, photo_url, password_hash)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-		RETURNING created_at, updated_at
-	`
-
-	var createdAt, updatedAt time.Time
-	err = h.DB.QueryRow(
-		query,
-		user.ID,
-		user.FirstName,
-		user.LastName,
-		user.Email,
-		user.Identify,
-		user.DocumentID,
-		user.Phone,
-		user.Role,
-		user.RoleID,
-		user.PhotoURL,
-		user.PasswordHash,
-	).Scan(&createdAt, &updatedAt)
-
-	if err != nil {
-		log.Printf("Error inserting user into database: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-
-		// Handle unique constraint violations (e.g. duplicate email) / Manejar violaciones de clave única (ej: correo duplicado)
-		if strings.Contains(err.Error(), "unique constraint") || strings.Contains(err.Error(), "duplicate key") {
-			w.WriteHeader(http.StatusConflict)
-			json.NewEncoder(w).Encode(map[string]string{"error": "Email already registered / Correo electrónico ya registrado"})
-			return
+	if err := h.userService.RegisterUser(&user); err != nil {
+		if strings.Contains(err.Error(), "already registered") {
+			jsonError(w, err.Error(), http.StatusConflict)
+		} else if strings.Contains(err.Error(), "missing required") || strings.Contains(err.Error(), "invalid") || strings.Contains(err.Error(), "least 6 characters") {
+			jsonError(w, err.Error(), http.StatusBadRequest)
+		} else {
+			jsonError(w, "Internal server error", http.StatusInternalServerError)
 		}
-
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error / Error interno del servidor"})
 		return
 	}
 
-	user.CreatedAt = &createdAt
-	user.UpdatedAt = &updatedAt
-
-	// Return successful response / Retornar respuesta exitosa
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(user)
-}
-
-// LoginUser handles POST /api/login to authenticate users
-// LoginUser maneja POST /api/login para autenticar usuarios
-func (h *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
-	// Only allow POST method / Solo permitir el método POST
-	if r.Method != http.MethodPost {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Method not allowed / Método no permitido"})
-		return
-	}
-
-	type LoginRequest struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
-
-	var req LoginRequest
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid JSON format / Formato de JSON inválido"})
-		return
-	}
-
-	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
-	req.Password = strings.TrimSpace(req.Password)
-
-	if req.Email == "" || req.Password == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Email and password are required / El correo y contraseña son requeridos"})
-		return
-	}
-
-	// Lookup user in PostgreSQL / Buscar usuario en PostgreSQL
-	// Supports lookup by email OR document_id (for clients)
-	query := `
-		SELECT id, first_name, last_name, email, identify, document_id, phone, role, role_id, photo_url, password_hash, created_at, updated_at
-		FROM users
-		WHERE email = $1 OR document_id = $1
-	`
-
-	var user models.User
-	var createdAt, updatedAt time.Time
-
-	err = h.DB.QueryRow(query, req.Email).Scan(
-		&user.ID,
-		&user.FirstName,
-		&user.LastName,
-		&user.Email,
-		&user.Identify,
-		&user.DocumentID,
-		&user.Phone,
-		&user.Role,
-		&user.RoleID,
-		&user.PhotoURL,
-		&user.PasswordHash,
-		&createdAt,
-		&updatedAt,
-	)
-
-	if err == sql.ErrNoRows {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid email or password / Correo o contraseña incorrectos"})
-		return
-	} else if err != nil {
-		log.Printf("Database query error in login: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error / Error interno del servidor"})
-		return
-	}
-
-	// Compare password hash / Comparar el hash de la contraseña
-	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password))
-	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid email or password / Correo o contraseña incorrectos"})
-		return
-	}
-
-	user.CreatedAt = &createdAt
-	user.UpdatedAt = &updatedAt
-
-	// Return authenticated user / Retornar el usuario autenticado
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(user)
 }
 
 // GetOwners handles GET /api/admin/owners to return all registered owners
 func (h *UserHandler) GetOwners(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Method not allowed"})
+		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	query := `
-		SELECT id, first_name, last_name, email, identify, document_id, phone, role, photo_url, created_at
-		FROM users
-		WHERE role = 'owner'
-		ORDER BY created_at DESC
-	`
-
-	rows, err := h.DB.Query(query)
+	owners, err := h.userService.GetOwners()
 	if err != nil {
-		log.Printf("Error querying owners: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
 		return
-	}
-	defer rows.Close()
-
-	owners := []models.User{}
-	for rows.Next() {
-		var u models.User
-		var createdAt time.Time
-		if err := rows.Scan(
-			&u.ID, &u.FirstName, &u.LastName, &u.Email,
-			&u.Identify, &u.DocumentID, &u.Phone, &u.Role,
-			&u.PhotoURL, &createdAt,
-		); err != nil {
-			log.Printf("Error scanning owner row: %v", err)
-			continue
-		}
-		u.CreatedAt = &createdAt
-		// Don't leak hashes or sensitive data
-		u.PasswordHash = ""
-		u.Password = ""
-		owners = append(owners, u)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -316,15 +67,40 @@ func (h *UserHandler) GetOwners(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(owners)
 }
 
-// RegisterSaaS handles POST /api/register-saas
-// Registra un nuevo usuario (owner) y crea su tienda en estado 'pending' atómicamente
+// GetMe handles GET /api/me to return the authenticated user's details
+func (h *UserHandler) GetMe(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	userID, ok := r.Context().Value(middlewares.UserIDKey).(string)
+	if !ok || userID == "" {
+		jsonError(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	user, err := h.userService.GetByID(userID)
+	if err != nil {
+		jsonError(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	user.PasswordHash = ""
+	user.Password = ""
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(user)
+}
+
 func (h *UserHandler) RegisterSaaS(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	type SaasRegisterRequest struct {
+	var req struct {
 		FirstName string `json:"first_name"`
 		LastName  string `json:"last_name"`
 		Email     string `json:"email"`
@@ -334,73 +110,20 @@ func (h *UserHandler) RegisterSaaS(w http.ResponseWriter, r *http.Request) {
 		ShopName  string `json:"shop_name"`
 	}
 
-	var req SaasRegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		jsonError(w, "Invalid JSON format", http.StatusBadRequest)
 		return
 	}
 
-	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
-	if req.Email == "" || req.Password == "" || req.ShopName == "" {
-		jsonError(w, "Email, password, and shop_name are required", http.StatusBadRequest)
-		return
-	}
-
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	userID, err := h.userService.RegisterSaaS(req.FirstName, req.LastName, req.Email, req.Password, req.Identify, req.Phone, req.ShopName)
 	if err != nil {
-		jsonError(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	tx, err := h.DB.Begin()
-	if err != nil {
-		jsonError(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-	defer tx.Rollback()
-
-	// 1. Crear el usuario
-	userID := generateUUID()
-	userQuery := `
-		INSERT INTO users (id, first_name, last_name, email, identify, phone, role, password_hash)
-		VALUES ($1, $2, $3, $4, $5, $6, 'owner', $7)
-	`
-	if _, err := tx.Exec(userQuery, userID, req.FirstName, req.LastName, req.Email, req.Identify, req.Phone, string(hashedPassword)); err != nil {
-		if strings.Contains(err.Error(), "unique constraint") || strings.Contains(err.Error(), "duplicate key") {
-			jsonError(w, "Email already registered", http.StatusConflict)
+		if strings.Contains(err.Error(), "already registered") {
+			jsonError(w, err.Error(), http.StatusConflict)
+		} else if strings.Contains(err.Error(), "missing required") {
+			jsonError(w, err.Error(), http.StatusBadRequest)
 		} else {
-			log.Printf("Error inserting user: %v", err)
-			jsonError(w, "Error creating user", http.StatusInternalServerError)
+			jsonError(w, "Internal server error", http.StatusInternalServerError)
 		}
-		return
-	}
-
-	// 2. Crear la tienda en estado pending
-	shopQuery := `
-		INSERT INTO shops (name, owner_id, timezone, status)
-		VALUES ($1, $2, 'America/Bogota', 'pending')
-		RETURNING id
-	`
-	var shopID string
-	if err := tx.QueryRow(shopQuery, req.ShopName, userID).Scan(&shopID); err != nil {
-		log.Printf("Error inserting shop: %v", err)
-		jsonError(w, "Error creating shop", http.StatusInternalServerError)
-		return
-	}
-
-	// 3. Vincular como miembro
-	memberQuery := `
-		INSERT INTO shop_members (shop_id, user_id, role, permissions)
-		VALUES ($1, $2, 'owner', '{}')
-	`
-	if _, err := tx.Exec(memberQuery, shopID, userID); err != nil {
-		log.Printf("Error inserting shop member: %v", err)
-		jsonError(w, "Error linking shop", http.StatusInternalServerError)
-		return
-	}
-
-	if err := tx.Commit(); err != nil {
-		jsonError(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 

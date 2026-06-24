@@ -1,4 +1,3 @@
-import { Timestamp } from "firebase/firestore";
 
 export interface SessionExpense {
     description: string;
@@ -9,8 +8,8 @@ export interface CashSession {
     id: string;
     employeeId: string;     // UID del empleado que abrió la caja
     employeeName: string;   // Nombre del empleado
-    startTime: Timestamp;
-    endTime?: Timestamp;
+    startTime: string;
+    endTime?: string;
     status: 'open' | 'closed';
 
     openingBalance: number; // Base inicial
