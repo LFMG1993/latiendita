@@ -88,21 +88,12 @@ const PointOfSalePage: FC = () => {
             try {
                 const today = new Date().getDay();
                 const [productsData, ingredientsData, paymentMethodsData, sessionData, promotionsData, clientsData] = await Promise.all([
-<<<<<<< HEAD:src/pages/shop/PointOfSalePage.tsx
-                    getProducts(shopId),
-                    getIngredients(shopId),
-                    getActivePaymentMethods(shopId),
-                    getOpenCashSession(shopId),
-                    getActivePromotionsForToday(shopId, today),
+                    getProducts(shopId!),
+                    getIngredients(shopId!),
+                    getActivePaymentMethods(shopId!),
+                    getOpenCashSession(shopId!),
+                    getActivePromotionsForToday(shopId!, today),
                     getAllClients()
-=======
-                    getProducts(heladeriaId),
-                    getIngredients(heladeriaId),
-                    getActivePaymentMethods(heladeriaId),
-                    getOpenCashSession(heladeriaId),
-                    getActivePromotionsForToday(heladeriaId, today),
-                    getAllClients(heladeriaId)
->>>>>>> refs/remotes/origin/main:src/pages/admin/PointOfSalePage.tsx
                 ]);
                 setProducts(productsData);
                 setIngredients(ingredientsData);
@@ -316,7 +307,7 @@ const PointOfSalePage: FC = () => {
             sessionId: openSession.id,
             payments,
             total,
-            employeeId: user.uid,
+            employeeId: user.uid!,
             employeeName: user.firstName || user.email,
             clientId: clientId || undefined,
             clientName: clientName || undefined,

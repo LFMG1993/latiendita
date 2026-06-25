@@ -1,6 +1,6 @@
-import {FC, useMemo, useState} from "react";
-import {SellableProduct, Ingredient} from "../../../types";
-import '../../style/ProductGrid.css';
+import { FC, useMemo, useState } from "react";
+import { SellableProduct, Ingredient } from "../../../types";
+import '../../../style/ProductGrid.css';
 
 interface ProductGridProps {
     products: SellableProduct[];
@@ -9,9 +9,9 @@ interface ProductGridProps {
 }
 
 const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('es-CO', {style: 'currency', currency: 'COP', maximumFractionDigits: 0}).format(value);
+    new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(value);
 
-const ProductGrid: FC<ProductGridProps> = ({products, onProductSelect}) => {
+const ProductGrid: FC<ProductGridProps> = ({ products, onProductSelect }) => {
     const categories = useMemo(() => {
         const cats = Array.from(new Set(products.map(p => p.category || 'Sin Categoría')));
         return ['Todos', ...cats];
@@ -29,7 +29,7 @@ const ProductGrid: FC<ProductGridProps> = ({products, onProductSelect}) => {
             {/* Filtros de categoría */}
             <div
                 className="d-flex align-items-center gap-2 mb-4 pb-2"
-                style={{overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none'}}
+                style={{ overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
                 {categories.map(cat => (
                     <button
@@ -91,7 +91,7 @@ const ProductGrid: FC<ProductGridProps> = ({products, onProductSelect}) => {
 
             {filteredProducts.length === 0 && (
                 <div className="text-center py-5 text-muted">
-                    <div style={{fontSize: '2rem', opacity: 0.3}}>🛒</div>
+                    <div style={{ fontSize: '2rem', opacity: 0.3 }}>🛒</div>
                     <p className="mt-2 small">No hay productos en esta categoría</p>
                 </div>
             )}

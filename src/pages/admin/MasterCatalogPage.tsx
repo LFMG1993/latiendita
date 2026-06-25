@@ -6,7 +6,7 @@ import {
     createMasterProduct,
     updateMasterProduct,
     deleteMasterProduct,
-} from '../../services/masterProductService';
+} from '../../services/admin/masterProductService';
 import { useToast } from '../../context/ToastContext';
 
 const CATEGORIES = ['General', 'Alimentos', 'Bebidas', 'Lácteos', 'Limpieza', 'Cuidado Personal', 'Snacks', 'Congelados', 'Papelería', 'Otro'];

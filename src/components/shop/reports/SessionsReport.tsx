@@ -75,7 +75,7 @@ const SessionsReport: FC<SessionsReportProps> = ({sessions, loading}) => {
         if (!sessionDetails?.sales) return null;
         const hourMap = new Array(24).fill(0);
         sessionDetails.sales.forEach(sale => {
-            const hour = salnew Date(e.createdAt).getHours();
+            const hour = new Date(sale.createdAt).getHours();
             hourMap[hour] += sale.total;
         });
         const maxRevenue = Math.max(...hourMap);

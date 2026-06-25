@@ -1,15 +1,15 @@
-import {useState, useEffect, useRef, FC, ChangeEvent, FormEvent} from 'react';
-import {addPurchase, updatePurchase} from '../../../services/shop/purchaseServices';
-import {getIngredients} from '../../../services/shop/ingredientServices';
-import {getProducts} from '../../../services/shop/productServices';
-import Alert from '../../general/Alert';
-import {Ingredient, Purchase, NewPurchaseData, PurchaseItem, Supplier, UpdatePurchaseData, Product} from "../../../types";
-import {getSuppliers} from "../../../services/shop/supplierService";
-import Modal from "../../general/Modal";
-import {useAuthStore} from "../../../store/authStore";
-import SupplierForm from "../../suppliers/SupplierForm";
-import {usePermissions} from "../../../hooks/usePermissions.ts";
-import {Trash} from "react-bootstrap-icons";
+import { useState, useEffect, useRef, FC, ChangeEvent, FormEvent } from 'react';
+import { addPurchase, updatePurchase } from '../../../services/shop/purchaseServices';
+import { getIngredients } from '../../../services/shop/ingredientServices';
+import { getProducts } from '../../../services/shop/productServices';
+import Alert from '../../shared/Alert';
+import { Ingredient, Purchase, NewPurchaseData, PurchaseItem, Supplier, UpdatePurchaseData, Product } from "../../../types";
+import { getSuppliers } from "../../../services/shop/supplierService";
+import Modal from "../../shared/Modal";
+import { useAuthStore } from "../../../store/authStore";
+import SupplierForm from "../suppliers/SupplierForm";
+import { usePermissions } from "../../../hooks/usePermissions.ts";
+import { Trash } from "react-bootstrap-icons";
 
 interface AddPurchaseFormProps {
     onFormSubmit: () => void;
@@ -35,12 +35,12 @@ interface CurrentItemState {
 
 const fmt = (v: number) => new Intl.NumberFormat('es-CO').format(v);
 
-const AddPurchaseForm: FC<AddPurchaseFormProps> = ({onFormSubmit, shopId, purchaseToEdit}) => {
-    const {user} = useAuthStore();
-    const {hasPermission} = usePermissions();
+const AddPurchaseForm: FC<AddPurchaseFormProps> = ({ onFormSubmit, shopId, purchaseToEdit }) => {
+    const { user } = useAuthStore();
+    const { hasPermission } = usePermissions();
     const canCreateSupplier = hasPermission('suppliers_create');
 
-    const initialState: FormDataState = {supplierId: '', invoiceNumber: '', items: []};
+    const initialState: FormDataState = { supplierId: '', invoiceNumber: '', items: [] };
     const initialItemState: CurrentItemState = {
         itemId: '', itemType: '', quantity: '', itemTotalCost: '', selectedUnit: '', itemSupplierId: ''
     };
@@ -109,15 +109,15 @@ const AddPurchaseForm: FC<AddPurchaseFormProps> = ({onFormSubmit, shopId, purcha
     }, [formData.supplierId, availableSuppliers]);
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-        const {name, value} = e.target;
-        setFormData(prev => ({...prev, [name]: value}));
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
     const handleCurrentItemChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        const {name, value} = e.target;
+        const { name, value } = e.target;
         if (name === 'itemSelection') {
             if (!value) {
-                setCurrentItem({...currentItem, itemId: '', itemType: '', selectedUnit: ''});
+                setCurrentItem({ ...currentItem, itemId: '', itemType: '', selectedUnit: '' });
                 return;
             }
             const [type, id] = value.split('::');
@@ -128,9 +128,9 @@ const AddPurchaseForm: FC<AddPurchaseFormProps> = ({onFormSubmit, shopId, purcha
             } else {
                 unit = 'Unidad';
             }
-            setCurrentItem({...currentItem, itemId: id, itemType: type as 'ingredient' | 'product', selectedUnit: unit});
+            setCurrentItem({ ...currentItem, itemId: id, itemType: type as 'ingredient' | 'product', selectedUnit: unit });
         } else {
-            setCurrentItem({...currentItem, [name]: value});
+            setCurrentItem({ ...currentItem, [name]: value });
         }
     };
 
@@ -143,15 +143,15 @@ const AddPurchaseForm: FC<AddPurchaseFormProps> = ({onFormSubmit, shopId, purcha
             const totalUnits = n * u;
             const totalCost = n * p;
             const pricePerUnit = p / u;
-            return {totalUnits, totalCost, pricePerUnit, valid: true};
+            return { totalUnits, totalCost, pricePerUnit, valid: true };
         }
-        return {totalUnits: 0, totalCost: 0, pricePerUnit: 0, valid: false};
+        return { totalUnits: 0, totalCost: 0, pricePerUnit: 0, valid: false };
     })();
 
     const getItemSupplier = (itemSupplierId: string) => {
-        if (supplierMode === 'single') return {id: formData.supplierId, name: availableSuppliers.find(s => s.id === formData.supplierId)?.name || ''};
+        if (supplierMode === 'single') return { id: formData.supplierId, name: availableSuppliers.find(s => s.id === formData.supplierId)?.name || '' };
         const sup = availableSuppliers.find(s => s.id === itemSupplierId);
-        return {id: itemSupplierId, name: sup?.name || ''};
+        return { id: itemSupplierId, name: sup?.name || '' };
     };
 
     const handleAddItem = () => {
@@ -183,12 +183,12 @@ const AddPurchaseForm: FC<AddPurchaseFormProps> = ({onFormSubmit, shopId, purcha
                 quantity: pkgTotal.totalUnits,
                 unitCost: pkgTotal.pricePerUnit,
                 consumptionUnitsPerPurchaseUnit: 1,
-                ...(supplierMode === 'multi' && {supplierId: sup.id, supplierName: sup.name}),
+                ...(supplierMode === 'multi' && { supplierId: sup.id, supplierName: sup.name }),
             };
 
-            setFormData(prev => ({...prev, items: [...prev.items, newItem]}));
+            setFormData(prev => ({ ...prev, items: [...prev.items, newItem] }));
             setCurrentItem(initialItemState);
-            setPackageDetails({numPackages: '', unitsPerPackage: '', pricePerPackage: ''});
+            setPackageDetails({ numPackages: '', unitsPerPackage: '', pricePerPackage: '' });
             ingredientSelectRef.current?.focus();
             return;
         }
@@ -234,11 +234,11 @@ const AddPurchaseForm: FC<AddPurchaseFormProps> = ({onFormSubmit, shopId, purcha
             quantity,
             unitCost: totalCost / quantity,
             consumptionUnitsPerPurchaseUnit,
-            ...(currentItem.itemType === 'ingredient' ? {ingredientId: currentItem.itemId} : {productId: currentItem.itemId}),
-            ...(supplierMode === 'multi' && {supplierId: sup.id, supplierName: sup.name}),
+            ...(currentItem.itemType === 'ingredient' ? { ingredientId: currentItem.itemId } : { productId: currentItem.itemId }),
+            ...(supplierMode === 'multi' && { supplierId: sup.id, supplierName: sup.name }),
         };
 
-        setFormData(prev => ({...prev, items: [...prev.items, newItem]}));
+        setFormData(prev => ({ ...prev, items: [...prev.items, newItem] }));
         setCurrentItem(initialItemState);
         ingredientSelectRef.current?.focus();
     };
@@ -248,7 +248,7 @@ const AddPurchaseForm: FC<AddPurchaseFormProps> = ({onFormSubmit, shopId, purcha
     };
 
     const handleRemoveItem = (idx: number) => {
-        setFormData(prev => ({...prev, items: prev.items.filter((_, i) => i !== idx)}));
+        setFormData(prev => ({ ...prev, items: prev.items.filter((_, i) => i !== idx) }));
     };
 
     const handleSubmit = async (e: FormEvent) => {
@@ -287,7 +287,7 @@ const AddPurchaseForm: FC<AddPurchaseFormProps> = ({onFormSubmit, shopId, purcha
                     ...formData,
                     supplierId: formData.supplierId || 'MULTI',
                     supplierName: selectedSupplier?.name || 'Varios Proveedores',
-                    purchasedByEmployeeId: user!.uid,
+                    purchasedByEmployeeId: user!.uid!,
                     total,
                     internalInvoiceNumber: 'PENDING',
                 };
@@ -306,8 +306,8 @@ const AddPurchaseForm: FC<AddPurchaseFormProps> = ({onFormSubmit, shopId, purcha
 
     return (
         <>
-            {error && <Alert type="danger" message={error}/>}
-            {success && <Alert type="success" message={success}/>}
+            {error && <Alert type="danger" message={error} />}
+            {success && <Alert type="success" message={success} />}
             <form onSubmit={handleSubmit}>
 
                 {/* ── MODO DE PROVEEDOR ── */}
@@ -324,7 +324,7 @@ const AddPurchaseForm: FC<AddPurchaseFormProps> = ({onFormSubmit, shopId, purcha
                         <button
                             type="button"
                             className={`btn btn-sm rounded-pill px-3 ${supplierMode === 'multi' ? 'btn-primary' : 'btn-outline-secondary'}`}
-                            onClick={() => { setSupplierMode('multi'); setFormData(prev => ({...prev, supplierId: ''})); }}
+                            onClick={() => { setSupplierMode('multi'); setFormData(prev => ({ ...prev, supplierId: '' })); }}
                         >
                             🏬 Varios proveedores
                         </button>
@@ -341,7 +341,7 @@ const AddPurchaseForm: FC<AddPurchaseFormProps> = ({onFormSubmit, shopId, purcha
                                 <select
                                     className="form-select"
                                     value={formData.supplierId}
-                                    onChange={e => setFormData(prev => ({...prev, supplierId: e.target.value}))}
+                                    onChange={e => setFormData(prev => ({ ...prev, supplierId: e.target.value }))}
                                     required={supplierMode === 'single'}
                                 >
                                     <option value="">Selecciona un proveedor...</option>
@@ -351,7 +351,7 @@ const AddPurchaseForm: FC<AddPurchaseFormProps> = ({onFormSubmit, shopId, purcha
                                 </select>
                                 {canCreateSupplier && (
                                     <button className="btn btn-outline-secondary" type="button"
-                                            onClick={() => setIsSupplierModalOpen(true)} title="Nuevo proveedor">+
+                                        onClick={() => setIsSupplierModalOpen(true)} title="Nuevo proveedor">+
                                     </button>
                                 )}
                             </div>
@@ -360,12 +360,12 @@ const AddPurchaseForm: FC<AddPurchaseFormProps> = ({onFormSubmit, shopId, purcha
                     <div className={supplierMode === 'single' ? 'col-md-3' : 'col-md-6'}>
                         <label className="form-label">Número de Factura</label>
                         <input type="text" className="form-control" name="invoiceNumber"
-                               value={formData.invoiceNumber} onChange={handleChange} required/>
+                            value={formData.invoiceNumber} onChange={handleChange} required />
                     </div>
                     {supplierMode === 'single' && (
                         <div className="col-md-3">
                             <label className="form-label">N° Interno</label>
-                            <input type="text" className="form-control" value={nextInternalInvoice} readOnly disabled/>
+                            <input type="text" className="form-control" value={nextInternalInvoice} readOnly disabled />
                         </div>
                     )}
                 </div>
@@ -374,7 +374,7 @@ const AddPurchaseForm: FC<AddPurchaseFormProps> = ({onFormSubmit, shopId, purcha
                 <h5 className="mb-3">Ítems de la Compra</h5>
                 <div
                     className="rounded-3 p-3 mb-3"
-                    style={{background: 'var(--bs-tertiary-bg)', border: '1px solid var(--bs-border-color)'}}
+                    style={{ background: 'var(--bs-tertiary-bg)', border: '1px solid var(--bs-border-color)' }}
                 >
                     {/* Selectores de tipo y modo alineados en una sola fila */}
                     <div className="row mb-3 g-3">
@@ -382,13 +382,13 @@ const AddPurchaseForm: FC<AddPurchaseFormProps> = ({onFormSubmit, shopId, purcha
                             <label className="form-label small fw-bold text-muted text-uppercase d-block mb-2">Tipo de Ítem</label>
                             <div className="btn-group w-100" role="group">
                                 <input type="radio" className="btn-check" name="selType" id="selIng" autoComplete="off"
-                                       checked={selectionType === 'ingredient'}
-                                       onChange={() => { setSelectionType('ingredient'); setCurrentItem(initialItemState); }}/>
+                                    checked={selectionType === 'ingredient'}
+                                    onChange={() => { setSelectionType('ingredient'); setCurrentItem(initialItemState); }} />
                                 <label className="btn btn-outline-primary btn-sm flex-fill py-2" htmlFor="selIng">Ingrediente / Insumo</label>
 
                                 <input type="radio" className="btn-check" name="selType" id="selProd" autoComplete="off"
-                                       checked={selectionType === 'product'}
-                                       onChange={() => { setSelectionType('product'); setCurrentItem(initialItemState); }}/>
+                                    checked={selectionType === 'product'}
+                                    onChange={() => { setSelectionType('product'); setCurrentItem(initialItemState); }} />
                                 <label className="btn btn-outline-primary btn-sm flex-fill py-2" htmlFor="selProd">Producto Terminado</label>
                             </div>
                         </div>
@@ -399,13 +399,13 @@ const AddPurchaseForm: FC<AddPurchaseFormProps> = ({onFormSubmit, shopId, purcha
                                 <label className="form-label small fw-bold text-muted text-uppercase d-block mb-2">Modo de Compra</label>
                                 <div className="btn-group w-100" role="group">
                                     <input type="radio" className="btn-check" name="pMode" id="mUnit" autoComplete="off"
-                                           checked={purchaseMode === 'unit'}
-                                           onChange={() => { setPurchaseMode('unit'); setPackageDetails({numPackages: '', unitsPerPackage: '', pricePerPackage: ''}); }}/>
+                                        checked={purchaseMode === 'unit'}
+                                        onChange={() => { setPurchaseMode('unit'); setPackageDetails({ numPackages: '', unitsPerPackage: '', pricePerPackage: '' }); }} />
                                     <label className="btn btn-outline-secondary btn-sm flex-fill py-2" htmlFor="mUnit">🛒 Por Unidad</label>
 
                                     <input type="radio" className="btn-check" name="pMode" id="mPkg" autoComplete="off"
-                                           checked={purchaseMode === 'package'}
-                                           onChange={() => { setPurchaseMode('package'); setCurrentItem(prev => ({...prev, quantity: '', itemTotalCost: ''})); }}/>
+                                        checked={purchaseMode === 'package'}
+                                        onChange={() => { setPurchaseMode('package'); setCurrentItem(prev => ({ ...prev, quantity: '', itemTotalCost: '' })); }} />
                                     <label className="btn btn-outline-secondary btn-sm flex-fill py-2" htmlFor="mPkg">📦 Por Paquete</label>
                                 </div>
                             </div>
@@ -461,14 +461,14 @@ const AddPurchaseForm: FC<AddPurchaseFormProps> = ({onFormSubmit, shopId, purcha
                                         Cantidad ({currentItem.selectedUnit || 'Unidad'})
                                     </label>
                                     <input type="number" step="0.01" className="form-control form-control-sm"
-                                           name="quantity" value={currentItem.quantity}
-                                           onChange={handleCurrentItemChange} onKeyDown={handleKeyDown} min="0.01"/>
+                                        name="quantity" value={currentItem.quantity}
+                                        onChange={handleCurrentItemChange} onKeyDown={handleKeyDown} min="0.01" />
                                 </div>
                                 <div className="col">
                                     <label className="form-label small">Costo Total del Ítem</label>
                                     <input type="number" step="0.01" className="form-control form-control-sm"
-                                           name="itemTotalCost" value={currentItem.itemTotalCost}
-                                           onChange={handleCurrentItemChange} onKeyDown={handleKeyDown} min="0"/>
+                                        name="itemTotalCost" value={currentItem.itemTotalCost}
+                                        onChange={handleCurrentItemChange} onKeyDown={handleKeyDown} min="0" />
                                 </div>
                             </>
                         )}
@@ -479,23 +479,23 @@ const AddPurchaseForm: FC<AddPurchaseFormProps> = ({onFormSubmit, shopId, purcha
                                 <div className="col">
                                     <label className="form-label small"># Paquetes</label>
                                     <input type="number" className="form-control form-control-sm" min="1"
-                                           placeholder="Ej: 3"
-                                           value={packageDetails.numPackages}
-                                           onChange={e => setPackageDetails(p => ({...p, numPackages: e.target.value}))}/>
+                                        placeholder="Ej: 3"
+                                        value={packageDetails.numPackages}
+                                        onChange={e => setPackageDetails(p => ({ ...p, numPackages: e.target.value }))} />
                                 </div>
                                 <div className="col">
                                     <label className="form-label small">Unid./Paquete</label>
                                     <input type="number" className="form-control form-control-sm" min="1"
-                                           placeholder="Ej: 12"
-                                           value={packageDetails.unitsPerPackage}
-                                           onChange={e => setPackageDetails(p => ({...p, unitsPerPackage: e.target.value}))}/>
+                                        placeholder="Ej: 12"
+                                        value={packageDetails.unitsPerPackage}
+                                        onChange={e => setPackageDetails(p => ({ ...p, unitsPerPackage: e.target.value }))} />
                                 </div>
                                 <div className="col">
                                     <label className="form-label small">Precio/Paquete</label>
                                     <input type="number" className="form-control form-control-sm" min="0"
-                                           placeholder="Ej: 18000"
-                                           value={packageDetails.pricePerPackage}
-                                           onChange={e => setPackageDetails(p => ({...p, pricePerPackage: e.target.value}))}/>
+                                        placeholder="Ej: 18000"
+                                        value={packageDetails.pricePerPackage}
+                                        onChange={e => setPackageDetails(p => ({ ...p, pricePerPackage: e.target.value }))} />
                                 </div>
                             </>
                         )}
@@ -512,7 +512,7 @@ const AddPurchaseForm: FC<AddPurchaseFormProps> = ({onFormSubmit, shopId, purcha
                     {selectionType === 'product' && purchaseMode === 'package' && pkgTotal.valid && (
                         <div
                             className="mt-3 rounded-2 px-3 py-2 small d-flex align-items-center justify-content-between"
-                            style={{background: 'var(--bs-info-bg-subtle)', border: '1px solid var(--bs-info-border-subtle)'}}
+                            style={{ background: 'var(--bs-info-bg-subtle)', border: '1px solid var(--bs-info-border-subtle)' }}
                         >
                             <span>
                                 📦 <strong>{fmt(parseFloat(packageDetails.numPackages))} paquetes</strong>
@@ -542,7 +542,7 @@ const AddPurchaseForm: FC<AddPurchaseFormProps> = ({onFormSubmit, shopId, purcha
                             <div
                                 key={idx}
                                 className="d-flex align-items-center justify-content-between px-3 py-2"
-                                style={{borderBottom: idx < formData.items.length - 1 ? '1px solid var(--bs-border-color)' : 'none'}}
+                                style={{ borderBottom: idx < formData.items.length - 1 ? '1px solid var(--bs-border-color)' : 'none' }}
                             >
                                 <div>
                                     <div className="fw-semibold">{item.name}</div>
@@ -557,15 +557,15 @@ const AddPurchaseForm: FC<AddPurchaseFormProps> = ({onFormSubmit, shopId, purcha
                                 <div className="d-flex align-items-center gap-3">
                                     <span className="fw-bold">${fmt(item.quantity * item.unitCost)}</span>
                                     <button type="button" className="btn btn-sm btn-link text-danger p-0"
-                                            onClick={() => handleRemoveItem(idx)}>
-                                        <Trash size={16}/>
+                                        onClick={() => handleRemoveItem(idx)}>
+                                        <Trash size={16} />
                                     </button>
                                 </div>
                             </div>
                         ))}
                         <div
                             className="px-3 py-2 d-flex justify-content-end fw-bold"
-                            style={{background: 'var(--bs-tertiary-bg)'}}
+                            style={{ background: 'var(--bs-tertiary-bg)' }}
                         >
                             Total Compra: ${fmt(totalCompra)}
                         </div>
@@ -586,8 +586,8 @@ const AddPurchaseForm: FC<AddPurchaseFormProps> = ({onFormSubmit, shopId, purcha
             </form>
 
             <Modal title="Añadir Nuevo Proveedor" show={isSupplierModalOpen}
-                   onClose={() => setIsSupplierModalOpen(false)}>
-                <SupplierForm shopId={shopId} onFormSubmit={() => { setIsSupplierModalOpen(false); fetchData(); }}/>
+                onClose={() => setIsSupplierModalOpen(false)}>
+                <SupplierForm shopId={shopId} onFormSubmit={() => { setIsSupplierModalOpen(false); fetchData(); }} />
             </Modal>
         </>
     );

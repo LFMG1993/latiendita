@@ -33,6 +33,7 @@ func main() {
 	paymentMethodRepo := repositories.NewPaymentMethodRepository(db)
 	supplierRepo := repositories.NewSupplierRepository(db)
 	sessionRepo := repositories.NewSessionRepository(db)
+	masterProductRepo := repositories.NewMasterProductRepository(db)
 
 	// Initialize services
 	userService := services.NewUserService(userRepo)
@@ -44,9 +45,9 @@ func main() {
 	paymentMethodService := services.NewPaymentMethodService(paymentMethodRepo)
 	supplierService := services.NewSupplierService(supplierRepo)
 	authService := services.NewAuthService(userRepo, sessionRepo, cfg)
+	masterProductService := services.NewMasterProductService(masterProductRepo)
 
 	// Initialize handlers / Inicializar controladores
-<<<<<<< HEAD
 	userHandler := handlers.NewUserHandler(userService)
 	shopHandler := handlers.NewShopHandler(shopService)
 	productHandler := handlers.NewProductHandler(productService)
@@ -56,17 +57,7 @@ func main() {
 	saleHandler := handlers.NewSaleHandler(saleService)
 	orderHandler := handlers.NewOrderHandler(orderService)
 	authHandler := handlers.NewAuthHandler(authService)
-=======
-	userHandler := handlers.NewUserHandler(db)
-	shopHandler := handlers.NewShopHandler(db)
-	productHandler := handlers.NewProductHandler(db)
-	supplierHandler := handlers.NewSupplierHandler(db)
-	paymentMethodHandler := handlers.NewPaymentMethodHandler(db)
-	cashSessionHandler := handlers.NewCashSessionHandler(db)
-	saleHandler := handlers.NewSaleHandler(db)
-	orderHandler := handlers.NewOrderHandler(db)
-	masterProductHandler := handlers.NewMasterProductHandler(db)
->>>>>>> refs/remotes/origin/main
+	masterProductHandler := handlers.NewMasterProductHandler(masterProductService)
 
 	// Router setup
 	// Configuración del enrutador
@@ -151,79 +142,6 @@ func main() {
 		}
 	})
 
-	// Public Master Product Shops endpoint: GET /api/public/master-products/{id}/shops
-	mux.HandleFunc("/api/public/master-products/", func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasSuffix(r.URL.Path, "/shops") && r.Method == http.MethodGet {
-			masterProductHandler.GetMasterProductShops(w, r)
-		} else {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	})
-
-	// Public Shop Enroll endpoint: POST /api/public/shops/{shop_id}/enroll
-	mux.HandleFunc("/api/public/shops/", func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasSuffix(r.URL.Path, "/enroll") && r.Method == http.MethodPost {
-			masterProductHandler.EnrollClientToShop(w, r)
-		} else {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	})
-
-	// Master Catalog routes (Super Admin)
-	// GET/POST /api/admin/master-products
-	mux.HandleFunc("/api/admin/master-products", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			masterProductHandler.GetAllMasterProducts(w, r)
-		case http.MethodPost:
-			masterProductHandler.CreateMasterProduct(w, r)
-		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	})
-	// PUT/DELETE /api/admin/master-products/{id}
-	mux.HandleFunc("/api/admin/master-products/", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodPut:
-			masterProductHandler.UpdateMasterProduct(w, r)
-		case http.MethodDelete:
-			masterProductHandler.DeleteMasterProduct(w, r)
-		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	})
-
-	// Product Requests routes (Super Admin)
-	// GET /api/admin/product-requests
-	mux.HandleFunc("/api/admin/product-requests", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			masterProductHandler.GetProductRequests(w, r)
-		} else {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	})
-	// PUT /api/admin/product-requests/{id}/approve|reject
-	mux.HandleFunc("/api/admin/product-requests/", func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
-		switch {
-		case strings.HasSuffix(path, "/approve") && r.Method == http.MethodPut:
-			masterProductHandler.ApproveProductRequest(w, r)
-		case strings.HasSuffix(path, "/reject") && r.Method == http.MethodPut:
-			masterProductHandler.RejectProductRequest(w, r)
-		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	})
-
-	// GET /api/master-products/search?q= (Shop owners search)
-	mux.HandleFunc("/api/master-products/search", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			masterProductHandler.SearchMasterProducts(w, r)
-		} else {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	})
-
 	// Consolidated /api/shops/{id}/... handler
 	// All sub-resources are dispatched here based on URL suffix
 	mux.HandleFunc("/api/shops/", func(w http.ResponseWriter, r *http.Request) {
@@ -233,6 +151,17 @@ func main() {
 		case strings.Contains(path, "/invitations"):
 			w.Header().Set("Content-Type", "application/json")
 			w.Write([]byte("[]"))
+
+		// Product Requests
+		case strings.HasSuffix(path, "/product-requests"):
+			switch r.Method {
+			case http.MethodGet:
+				masterProductHandler.GetShopProductRequests(w, r)
+			case http.MethodPost:
+				masterProductHandler.CreateProductRequest(w, r)
+			default:
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			}
 
 		// Shop membership
 		case strings.HasSuffix(path, "/members"):
@@ -406,17 +335,6 @@ func main() {
 				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			}
 
-		// Product Requests (Shop Owner)
-		case strings.HasSuffix(path, "/product-requests"):
-			switch r.Method {
-			case http.MethodGet:
-				masterProductHandler.GetShopProductRequests(w, r)
-			case http.MethodPost:
-				masterProductHandler.CreateProductRequest(w, r)
-			default:
-				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			}
-
 		// Clients
 		case strings.HasSuffix(path, "/clients"):
 			switch r.Method {
@@ -503,6 +421,71 @@ func main() {
 	mux.HandleFunc("/api/cash-sessions/", func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/close") && r.Method == http.MethodPut {
 			cashSessionHandler.CloseCashSession(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	// ---- MASTER CATALOG ROUTES ----
+	mux.HandleFunc("/api/admin/master-products", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			masterProductHandler.GetAllMasterProducts(w, r)
+		case http.MethodPost:
+			masterProductHandler.CreateMasterProduct(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	mux.HandleFunc("/api/admin/master-products/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPut {
+			masterProductHandler.UpdateMasterProduct(w, r)
+		} else if r.Method == http.MethodDelete {
+			masterProductHandler.DeleteMasterProduct(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	mux.HandleFunc("/api/master-products/search", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			masterProductHandler.SearchMasterProducts(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	mux.HandleFunc("/api/admin/product-requests", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			masterProductHandler.GetProductRequests(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	mux.HandleFunc("/api/admin/product-requests/", func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		if strings.HasSuffix(path, "/approve") && r.Method == http.MethodPut {
+			masterProductHandler.ApproveProductRequest(w, r)
+		} else if strings.HasSuffix(path, "/reject") && r.Method == http.MethodPut {
+			masterProductHandler.RejectProductRequest(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	mux.HandleFunc("/api/public/master-products/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/shops") && r.Method == http.MethodGet {
+			masterProductHandler.GetMasterProductShops(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	mux.HandleFunc("/api/public/shops/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/enroll") && r.Method == http.MethodPost {
+			masterProductHandler.EnrollClientToShop(w, r)
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}

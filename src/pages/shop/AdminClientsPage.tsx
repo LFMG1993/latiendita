@@ -3,12 +3,8 @@ import {useToast} from "../../context/ToastContext";
 import { getAllClients } from "../../services/admin/adminUserServices";
 import { updateClientFinancials } from "../../services/shopPublic/clientAccountServices";
 import {useAuthStore} from '../../store/authStore';
-<<<<<<< HEAD:src/pages/shop/AdminClientsPage.tsx
 import {getClientOrders} from '../../services/shop/orderService';
-=======
-import {getClientOrders} from '../../services/orderService';
-import {getSalesByClientId} from '../../services/saleServices';
->>>>>>> refs/remotes/origin/main:src/pages/admin/AdminClientsPage.tsx
+import {getSalesByClientId} from '../../services/shop/saleServices';
 import {UserProfile} from '../../types/user.types';
 import {Order} from '../../types/order.types';
 import FullScreenLoader from '../../components/shared/FullScreenLoader';
@@ -38,8 +34,8 @@ const AdminClientsPage: FC = () => {
 
     const loadData = async () => {
         try {
-            if (activeIceCreamShopId) {
-                const data = await getAllClients(activeIceCreamShopId);
+            if (activeShopId) {
+                const data = await getAllClients();
                 setClients(data);
             }
         } catch (err) {
@@ -50,10 +46,10 @@ const AdminClientsPage: FC = () => {
     };
 
     useEffect(() => {
-        if (activeIceCreamShopId) {
+        if (activeShopId) {
             loadData();
         }
-    }, [activeIceCreamShopId]);
+    }, [activeShopId]);
 
     const handleViewDetail = async (client: UserProfile) => {
         setSelectedClient(client);
@@ -64,21 +60,16 @@ const AdminClientsPage: FC = () => {
         setLoadingOrders(true);
         setShowDetail(true);
         try {
-<<<<<<< HEAD:src/pages/shop/AdminClientsPage.tsx
             if (client.uid && activeShopId) {
-                const orders = await getClientOrders(client.uid, activeShopId);
-                setClientOrders(orders);
-=======
-            if (client.uid && activeIceCreamShopId) {
                 const [orders, sales] = await Promise.all([
-                    getClientOrders(client.uid, activeIceCreamShopId),
-                    getSalesByClientId(activeIceCreamShopId, client.uid)
+                    getClientOrders(client.uid, activeShopId),
+                    getSalesByClientId(activeShopId, client.uid)
                 ]);
 
                 // Map POS sales to Order format for combined display
                 const mappedSales: Order[] = sales.map(sale => ({
                     id: sale.id,
-                    shopId: activeIceCreamShopId,
+                    shopId: activeShopId,
                     clientId: client.uid!,
                     clientName: sale.clientName,
                     items: sale.items.map(i => ({ 
@@ -91,17 +82,16 @@ const AdminClientsPage: FC = () => {
                     paymentMethod: sale.payments && sale.payments.length > 0 ? sale.payments[0].type : 'cash',
                     status: 'delivered', // POS sales are always completed
                     createdAt: sale.createdAt
-                } as any)); // Using any to bypass strict type checking since we only use these fields for display
+                } as any)); 
 
                 // Sort combined history from newest to oldest
                 const combinedHistory = [...orders, ...mappedSales].sort((a, b) => {
-                    const dateA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
-                    const dateB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+                    const dateA = new Date(a.createdAt || '').getTime();
+                    const dateB = new Date(b.createdAt || '').getTime();
                     return dateB - dateA;
                 });
                 
                 setClientOrders(combinedHistory);
->>>>>>> refs/remotes/origin/main:src/pages/admin/AdminClientsPage.tsx
             }
         } catch (err) {
             console.error(err);
@@ -111,10 +101,10 @@ const AdminClientsPage: FC = () => {
     };
 
     const handleUpdateSaldos = async () => {
-        if (!selectedClient?.uid || !activeIceCreamShopId) return;
+        if (!selectedClient?.uid || !activeShopId) return;
         setUpdatingSaldos(true);
         try {
-            await updateClientFinancials(activeIceCreamShopId, selectedClient.uid, tempCredits, tempDebt, tempIsCreditEnabled, tempCreditLimit);
+            await updateClientFinancials(activeShopId, selectedClient.uid, { credits: tempCredits, debt: tempDebt, isCreditEnabled: tempIsCreditEnabled, creditLimit: tempCreditLimit } as any);
             // Actualizar localmente
             setClients(prev => prev.map(c => c.uid === selectedClient.uid ? {...c, credits: tempCredits, debt: tempDebt, isCreditEnabled: tempIsCreditEnabled, creditLimit: tempCreditLimit} : c));
             setSelectedClient(prev => prev ? {...prev, credits: tempCredits, debt: tempDebt, isCreditEnabled: tempIsCreditEnabled, creditLimit: tempCreditLimit} : null);

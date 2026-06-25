@@ -1,6 +1,6 @@
 import {FC} from "react";
 import {Role} from "../../../types";
-import ActionButtons from "../../general/ActionButtons.tsx";
+import ActionButtons from "../../shared/ActionButtons.tsx";
 
 interface RolesTableProps {
     roles: Role[];

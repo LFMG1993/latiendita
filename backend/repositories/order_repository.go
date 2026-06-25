@@ -192,6 +192,35 @@ func (r *OrderRepository) FindDebtPaymentRequestsByShop(shopID string, status st
 	return requests, nil
 }
 
+func (r *OrderRepository) FindDebtPaymentRequestsByClient(clientID string) ([]models.DebtPaymentRequest, error) {
+	query := `
+		SELECT id, client_id, client_name, client_phone, shop_id, amount, payment_method_id,
+		       payment_method_name, voucher_number, status, notes, created_at, updated_at
+		FROM debt_payment_requests WHERE client_id = $1
+		ORDER BY created_at DESC
+	`
+	rows, err := r.DB.Query(query, clientID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var requests []models.DebtPaymentRequest
+	for rows.Next() {
+		var req models.DebtPaymentRequest
+		if err := rows.Scan(
+			&req.ID, &req.ClientID, &req.ClientName, &req.ClientPhone, &req.ShopID,
+			&req.Amount, &req.PaymentMethodID, &req.PaymentMethodName, &req.VoucherNumber,
+			&req.Status, &req.Notes, &req.CreatedAt, &req.UpdatedAt,
+		); err != nil {
+			log.Printf("Error scanning debt payment request row: %v", err)
+			continue
+		}
+		requests = append(requests, req)
+	}
+	return requests, nil
+}
+
 func (r *OrderRepository) ApproveDebtPaymentRequest(id string) error {
 	tx, err := r.DB.Begin()
 	if err != nil {

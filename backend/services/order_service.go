@@ -71,6 +71,13 @@ func (s *OrderService) GetDebtPaymentRequestsByShop(shopID string, status string
 	return s.repo.FindDebtPaymentRequestsByShop(shopID, status)
 }
 
+func (s *OrderService) GetClientDebtPayments(clientID string) ([]models.DebtPaymentRequest, error) {
+	if clientID == "" {
+		return nil, errors.New("client_id is required")
+	}
+	return s.repo.FindDebtPaymentRequestsByClient(clientID)
+}
+
 func (s *OrderService) ApproveDebtPaymentRequest(id string) error {
 	if id == "" {
 		return errors.New("payment request id is required")

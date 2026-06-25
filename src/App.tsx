@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { FC, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { useRegisterSW } from 'virtual:pwa-register/react';
@@ -36,6 +35,8 @@ import IngredientsPage from "./pages/shop/IngredientsPage";
 // --- RUTAS SUPER ADMIN (admin) ---
 import { SuperAdminDashboard } from "./pages/admin/SuperAdminDashboard";
 import { SaasClientsPage } from "./pages/admin/SaasClientsPage";
+import MasterCatalogPage from "./pages/admin/MasterCatalogPage";
+import ProductRequestsPage from "./pages/admin/ProductRequestsPage";
 
 // --- RUTAS SHARED (shared) ---
 import ProfilePage from "./pages/shared/ProfilePage";
@@ -52,57 +53,6 @@ import { TenantProvider } from "./context/TenantContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ToastProvider } from "./context/ToastContext";
 import { Shop } from "./types";
-=======
-import {FC, useEffect, useState} from "react";
-import {BrowserRouter as Router, Routes, Route, useNavigate} from "react-router-dom";
-import {useRegisterSW} from 'virtual:pwa-register/react';
-import HomePage from "./pages/public/HomePage.tsx";
-import RegisterPage from "./pages/public/RegisterPage.tsx";
-import ProductShowcasePage from "./pages/public/ProductShowcasePage.tsx";
-import {Timestamp} from "firebase/firestore";
-import LoginPage from "./pages/public/LoginPage.tsx";
-import ClientLoginPage from "./pages/public/ClientLoginPage.tsx";
-import ClientRegisterPage from "./pages/public/ClientRegisterPage.tsx";
-import ClientDashboardPage from "./pages/public/ClientDashboardPage.tsx";
-import AdminOrdersPage from "./pages/admin/AdminOrdersPage.tsx";
-import AdminClientsPage from "./pages/admin/AdminClientsPage.tsx";
-import AdminDebtPaymentsPage from "./pages/admin/AdminDebtPaymentsPage.tsx";
-import DashboardPage from "./pages/admin/DashboardPage.tsx";
-import IngredientsPage from "./pages/admin/IngredientsPage.tsx";
-import {auth} from './firebase';
-import {onAuthStateChanged} from 'firebase/auth';
-import {useAuthStore} from './store/authStore';
-import {getHeladeriasByUserId, getUserProfileData} from './services/userServices';
-import PendingApprovalPage from "./pages/public/PendingApprovalPage.tsx";
-import ProtectedRoute from './components/ProtectedRoute';
-import IceCreamShopPage from "./pages/admin/IceCreamShopPage.tsx";
-import FullScreenLoader from "./components/general/FullScreenLoader";
-import MainLayout from "./components/MainLayout";
-import ProfilePage from "./pages/admin/ProfilePage.tsx";
-import ProductsPage from "./pages/admin/ProductsPage.tsx";
-import PurchasesPage from "./pages/admin/PurchasesPage.tsx";
-import TeamManagementPage from "./pages/admin/TeamManagementPage.tsx";
-import {AdminProductsPage} from "./pages/admin/AdminProductsPage.tsx";
-import {SuperAdminDashboard} from "./pages/admin/SuperAdminDashboard.tsx";
-import {SaasClientsPage} from "./pages/admin/SaasClientsPage.tsx";
-import MasterCatalogPage from "./pages/admin/MasterCatalogPage.tsx";
-import ProductRequestsPage from "./pages/admin/ProductRequestsPage.tsx";
-import {PublicShopPage} from "./pages/public/PublicShopPage.tsx";
-import EmployeeClaim from "./pages/EmployeeClaim";
-import SuppliersPage from "./pages/admin/SuppliersPage.tsx";
-import PointOfSalePage from "./pages/admin/PointOfSalePage.tsx";
-import ReportsPage from "./pages/admin/ReportsPage.tsx";
-import CashSessionPage from "./pages/admin/CashSessionPage.tsx";
-import SettingsPage from "./pages/admin/SettingsPage.tsx";
-import PromotionsPage from "./pages/admin/PromotionsPage.tsx";
-import ExpensesPage from "./pages/admin/ExpensesPage.tsx";
-import {checkSchedule} from "./utils/scheduleUtils.ts";
-import {Heladeria} from "./types";
-import UpdateNotification from "./components/general/UpdateNotification.tsx";
-import {TenantProvider} from "./context/TenantContext";
-import {ThemeProvider} from "./context/ThemeContext";
-import {ToastProvider} from "./context/ToastContext";
->>>>>>> refs/remotes/origin/main
 
 const App: FC = () => {
     const { loading, setLoading, setAuthUser, setUserShop } = useAuthStore();
@@ -144,46 +94,7 @@ const App: FC = () => {
         };
 
         checkLocalAuth();
-<<<<<<< HEAD
     }, [setAuthUser, setUserShop, setLoading]);
-=======
-    }, [setAuthUser, setUserIceCreamShop, setLoading]);
-
-    // Se activa cuando el usuario se carga en el store.
-    useEffect(() => {
-        if (user && !initialRedirectDone) {
-            const currentPath = window.location.pathname;
-            if (currentPath.startsWith('/catalogo') || currentPath.startsWith('/employee-claim')) {
-                setInitialRedirectDone(true);
-                return;
-            }
-
-            // Verificar si el owner tiene solo tiendas en estado 'pending'
-            if (user.role === 'owner') {
-                const iceCreamShops = useAuthStore.getState().iceCreamShops;
-                const hasActiveShop = iceCreamShops.some(shop => shop.status === 'active' || shop.status === undefined);
-                const hasPendingShop = iceCreamShops.some(shop => shop.status === 'pending');
-                
-                if (!hasActiveShop && hasPendingShop) {
-                    navigate('/pending-approval', {replace: true});
-                    setInitialRedirectDone(true);
-                    return;
-                }
-            }
-
-            if (user.role === 'employee') {
-                navigate('/cash-session', {replace: true});
-            } else if (user.role === 'owner') {
-                navigate('/dashboard', {replace: true});
-            } else if (user.role === 'superAdmin') {
-                navigate('/super-admin', {replace: true});
-            } else if (user.role === 'client') {
-                navigate('/client/dashboard', {replace: true});
-            }
-            setInitialRedirectDone(true); // Marcamos que la redirección ya se hizo.
-        }
-    }, [user, initialRedirectDone, navigate]);
->>>>>>> refs/remotes/origin/main
 
     if (loading) {
         return <FullScreenLoader />;
@@ -212,34 +123,15 @@ const App: FC = () => {
                 <Route path="/super-admin"
                     element={<ProtectedRoute requiredPermission="super_admin_access"><MainLayout><SuperAdminDashboard /></MainLayout></ProtectedRoute>} />
                 <Route path="/super-admin/clients"
-<<<<<<< HEAD
                     element={<ProtectedRoute requiredPermission="super_admin_access"><MainLayout><SaasClientsPage /></MainLayout></ProtectedRoute>} />
+                <Route path="/super-admin/catalog"
+                    element={<ProtectedRoute requiredPermission="super_admin_access"><MainLayout><MasterCatalogPage/></MainLayout></ProtectedRoute>}/>
+                <Route path="/super-admin/product-requests"
+                    element={<ProtectedRoute requiredPermission="super_admin_access"><MainLayout><ProductRequestsPage/></MainLayout></ProtectedRoute>}/>
 
                 {/* --- RUTAS TENANT --- */}
                 <Route path="/dashboard"
                     element={<ProtectedRoute requiredPermission="shop_details_manage"><MainLayout><DashboardPage /></MainLayout></ProtectedRoute>} />
-=======
-                       element={<ProtectedRoute
-                           requiredPermission="super_admin_access"><MainLayout><SaasClientsPage/></MainLayout></ProtectedRoute>}/>
-                <Route path="/super-admin/catalog"
-                       element={<ProtectedRoute
-                           requiredPermission="super_admin_access"><MainLayout><MasterCatalogPage/></MainLayout></ProtectedRoute>}/>
-                <Route path="/super-admin/product-requests"
-                       element={<ProtectedRoute
-                           requiredPermission="super_admin_access"><MainLayout><ProductRequestsPage/></MainLayout></ProtectedRoute>}/>
-                <Route path="/orders"
-                       element={<ProtectedRoute
-                           requiredPermission="pos_access"><MainLayout><AdminOrdersPage/></MainLayout></ProtectedRoute>}/>
-                <Route path="/clients"
-                       element={<ProtectedRoute
-                           requiredPermission="pos_access"><MainLayout><AdminClientsPage/></MainLayout></ProtectedRoute>}/>
-                <Route path="/debt-payments"
-                       element={<ProtectedRoute
-                           requiredPermission="pos_access"><MainLayout><AdminDebtPaymentsPage/></MainLayout></ProtectedRoute>}/>
-                <Route path="/ingredients-page"
-                       element={<ProtectedRoute
-                           requiredPermission="ingredients_view"><MainLayout><IngredientsPage/></MainLayout></ProtectedRoute>}/>
->>>>>>> refs/remotes/origin/main
                 <Route path="/ice-cream-shop"
                     element={<ProtectedRoute requiredPermission="shop_details_manage"><MainLayout><ShopPage /></MainLayout></ProtectedRoute>} />
                 <Route path="/team-management"

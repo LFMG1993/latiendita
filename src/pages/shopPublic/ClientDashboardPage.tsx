@@ -11,27 +11,18 @@ import {useNavigate, useSearchParams} from 'react-router-dom';
 import {Wallet2, Receipt, ClockHistory, BoxArrowRight, GeoAltFill, MoonFill, SunFill, Plus, Dash, CartFill, PersonCircle, CheckLg, KeyFill} from 'react-bootstrap-icons';
 import {useTenant} from '../../context/TenantContext';
 import {useTheme} from '../../context/ThemeContext';
-<<<<<<< HEAD:src/pages/shopPublic/ClientDashboardPage.tsx
-import {getPublicProducts, getAllPublicShops} from '../../services/shopPublic/publicProductService';
+import {getPublicProducts} from '../../services/shopPublic/publicProductService';
+import {getClientEnrolledShops} from '../../services/shopPublic/clientService';
+import {getAllMasterProducts, getMasterProductShops, enrollClientToShop, ShopProductStatus} from '../../services/admin/masterProductService';
+import {MasterProduct} from '../../types/masterProduct.types';
 import {PublicProduct} from '../../types/public.types';
 import {createOrder} from '../../services/shop/orderService';
 import {logoutService} from '../../services/shared/logoutService';
+import {getAllClientSales} from "../../services/shop/saleServices";
+import {getOpenCashSession} from '../../services/shop/cashSessionServices';
 import { updateUserProfile } from "../../services/shared/userServices";
-=======
-import {getPublicProducts} from '../../services/publicProductService';
-import {getClientEnrolledShops} from '../../services/clientService';
-import {getAllMasterProducts, getMasterProductShops, enrollClientToShop, ShopProductStatus} from '../../services/masterProductService';
-import {MasterProduct} from '../../types/masterProduct.types';
-import {PublicProduct} from '../../types/public.types';
-import {createOrder} from '../../services/orderService';
-import {logoutService} from '../../services/logoutService';
-import {getAllClientSales} from "../../services/saleServices.ts";
-import {getOpenCashSession} from '../../services/cashSessionServices';
-import {doc, updateDoc} from 'firebase/firestore';
-import {auth, db} from '../../firebase';
->>>>>>> refs/remotes/origin/main:src/pages/public/ClientDashboardPage.tsx
 import {useToast} from '../../context/ToastContext';
-import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
+
 
 const ClientDashboardPage: FC = () => {
     const {user} = useAuthStore();
@@ -96,15 +87,15 @@ const ClientDashboardPage: FC = () => {
             try {
                 // 1. Obtener órdenes, ventas y deudas
                 const [ordersData, salesData, debtData] = await Promise.all([
-                    getClientOrders(user.uid),
-                    getAllClientSales(user.uid),
-                    getClientDebtPayments(user.uid)
+                    getClientOrders(user.uid!),
+                    getAllClientSales(user.uid!),
+                    getClientDebtPayments(user.uid!)
                 ]);
                 
                 const mappedSales: Order[] = salesData.map(sale => ({
                     id: sale.id,
-                    shopId: sale.shopId || '',
-                    clientId: user.uid,
+                    shopId: (sale as any).shopId || '',
+                    clientId: user.uid!,
                     clientName: sale.clientName,
                     items: sale.items.map(i => ({ 
                         product: { name: i.productName }, 
@@ -119,8 +110,8 @@ const ClientDashboardPage: FC = () => {
                 } as any));
 
                 const combinedHistory = [...ordersData, ...mappedSales].sort((a, b) => {
-                    const dateA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
-                    const dateB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+                    const dateA = new Date(a.createdAt || '').getTime();
+                    const dateB = new Date(b.createdAt || '').getTime();
                     return dateB - dateA;
                 });
 
@@ -133,20 +124,16 @@ const ClientDashboardPage: FC = () => {
                 // Si no hay en URL ni local, buscamos en el último pedido
                 const lastOrderShopId = ordersData.length > 0 ? ordersData[0].shopId : null;
                 
-<<<<<<< HEAD:src/pages/shopPublic/ClientDashboardPage.tsx
-                const shopId = urlShopId || localShopId || lastOrderShopId || user.shopIds?.[0];
-=======
-                let shopId = urlShopId || localShopId || lastOrderShopId || user.iceCreamShopIds?.[0];
+                let shopId: string | null | undefined = urlShopId || localShopId || lastOrderShopId || user.shopIds?.[0];
                 if (shopId === 'mock-shop-id-123') {
                     shopId = null;
                     localStorage.removeItem('last_shop_id');
                 }
->>>>>>> refs/remotes/origin/main:src/pages/public/ClientDashboardPage.tsx
-                setCurrentShopId(shopId || null);
+                setCurrentShopId(shopId || "");
 
                 // 3. Obtener financials si hay shopId
                 if (shopId) {
-                    const finData = await getClientFinancials(shopId, user.uid);
+                    const finData = await getClientFinancials(shopId!, user.uid!);
                     setFinancials(finData);
                 }
 
@@ -154,7 +141,7 @@ const ClientDashboardPage: FC = () => {
                     if (!localShopId) localStorage.setItem('last_shop_id', shopId);
                     const [productsData, shops, methodsData, masterData, openSession] = await Promise.all([
                         getPublicProducts(shopId),
-                        getClientEnrolledShops(user.uid),
+                        getClientEnrolledShops(user.uid!),
                         getActivePaymentMethods(shopId),
                         getAllMasterProducts(),
                         getOpenCashSession(shopId)
@@ -172,7 +159,7 @@ const ClientDashboardPage: FC = () => {
                     setIsShopOpen(!!openSession);
                 } else {
                     const [shops, masterData] = await Promise.all([
-                        getClientEnrolledShops(user.uid),
+                        getClientEnrolledShops(user.uid!),
                         getAllMasterProducts()
                     ]);
                     
@@ -191,7 +178,7 @@ const ClientDashboardPage: FC = () => {
                         localStorage.setItem('last_shop_id', firstShopId);
                         try {
                             const [finData, productsData, methodsData, openSession] = await Promise.all([
-                                getClientFinancials(firstShopId, user.uid),
+                                getClientFinancials(firstShopId, user.uid!),
                                 getPublicProducts(firstShopId),
                                 getActivePaymentMethods(firstShopId),
                                 getOpenCashSession(firstShopId)
@@ -269,11 +256,11 @@ const ClientDashboardPage: FC = () => {
         setProfileError('');
         setProfileSuccess('');
         try {
-            await updateUserProfile(user.uid, {
-                first_name: profileFirstName.trim(),
-                last_name: profileLastName.trim(),
+            await updateUserProfile(user.uid!, {
+                firstName: profileFirstName.trim(),
+                lastName: profileLastName.trim(),
                 phone: profilePhone.trim()
-            });
+            } as any);
             setProfileSuccess('Perfil actualizado correctamente.');
         } catch {
             setProfileError('Error al guardar los cambios.');
@@ -364,7 +351,7 @@ const ClientDashboardPage: FC = () => {
         try {
             const orderData = {
                 shopId,
-                clientId: user.uid,
+                clientId: user.uid!,
                 clientName: `${user.firstName} ${user.lastName}`,
                 clientPhone: user.phone || 'N/A',
                 items: cart.map(item => ({
@@ -383,18 +370,18 @@ const ClientDashboardPage: FC = () => {
             
             // Actualizar vista
             const [newFin, newOrders, newSales] = await Promise.all([
-                getClientFinancials(shopId, user.uid),
-                getClientOrders(user.uid),
-                getAllClientSales(user.uid)
+                getClientFinancials(shopId!, user.uid!),
+                getClientOrders(user.uid!),
+                getAllClientSales(user.uid!)
             ]);
             
-            const mappedNewSales: Order[] = newSales.map(sale => ({
+            const mappedNewSales: Order[] = newSales.map((sale: any) => ({
                 id: sale.id,
-                shopId: sale.shopId || '',
-                clientId: user.uid,
+                shopId: (sale as any).shopId || '',
+                clientId: user.uid!,
                 clientName: sale.clientName,
                 items: sale.items.map(i => ({ 
-                    product: { name: i.productName }, 
+                    product: { name: i.product.name }, 
                     quantity: i.quantity, 
                     priceAtPurchase: i.unitPrice 
                 })),
@@ -406,8 +393,8 @@ const ClientDashboardPage: FC = () => {
             } as any));
 
             const newCombinedHistory = [...newOrders, ...mappedNewSales].sort((a, b) => {
-                const dateA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
-                const dateB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+                const dateA = new Date(a.createdAt || '').getTime();
+                const dateB = new Date(b.createdAt || '').getTime();
                 return dateB - dateA;
             });
 
@@ -437,7 +424,7 @@ const ClientDashboardPage: FC = () => {
         try {
             const method = paymentMethodsList.find(m => m.id === debtPaymentMethodId);
             await createDebtPaymentRequest({
-                clientId: user.uid,
+                clientId: user.uid!,
                 clientName: `${user.firstName} ${user.lastName}`,
                 clientPhone: user.phone || '',
                 shopId: currentShopId,
@@ -453,7 +440,7 @@ const ClientDashboardPage: FC = () => {
             setDebtPaymentMethodId('');
             showToast('Solicitud enviada correctamente. El administrador la revisará pronto.', 'success');
             
-            const newDebtData = await getClientDebtPayments(user.uid);
+            const newDebtData = await getClientDebtPayments(user.uid!);
             setDebtPaymentsList(newDebtData);
             setActiveTab('debt_payments');
         } catch (err) {
@@ -703,7 +690,7 @@ const ClientDashboardPage: FC = () => {
                                                             style={{borderColor: tenant.theme.primaryColor, color: tenant.theme.primaryColor}}
                                                             onClick={async () => {
                                                                 setSelectedMasterProduct(product);
-                                                                const shops = await getMasterProductShops(product.id, user?.uid);
+                                                                const shops = await getMasterProductShops(product.id, user?.uid || '');
                                                                 setMasterProductShops(shops);
                                                                 setShowMasterProductModal(true);
                                                             }}
@@ -1094,7 +1081,7 @@ const ClientDashboardPage: FC = () => {
                                             <p className="mb-1 small text-secondary">Items: {order.totalItems}</p>
                                             <ul className="list-unstyled mb-0 small text-muted ps-2 border-start">
                                                 {(order.items || []).map((item, idx) => (
-                                                    <li key={idx}>{item.quantity}x {item.product?.name || item.productName || 'Producto'}</li>
+                                                    <li key={idx}>{item.quantity}x {item.product?.name || 'Producto'}</li>
                                                 ))}
                                             </ul>
                                         </div>
@@ -1240,7 +1227,7 @@ const ClientDashboardPage: FC = () => {
                                                                 if (!user) return;
                                                                 try {
                                                                     if (!shop.is_enrolled) {
-                                                                        await enrollClientToShop(shop.shop_id, user.uid);
+                                                                        await enrollClientToShop(shop.shop_id, user.uid!);
                                                                     }
                                                                     await handleSelectShop(shop.shop_id);
                                                                     setShowMasterProductModal(false);

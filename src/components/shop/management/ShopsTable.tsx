@@ -1,6 +1,6 @@
 import {FC, useMemo, useState} from 'react';
-import ActionButtons from '../../general/ActionButtons';
-import CloudinaryImage from "../../general/CloudinaryImage";
+import ActionButtons from '../../shared/ActionButtons';
+import CloudinaryImage from "../../shared/CloudinaryImage";
 import {getPublicIdFromUrl} from "../../../utils/getPublicIdFromUrl";
 import {Shop} from "../../../types";
 import {
@@ -12,7 +12,7 @@ import {
     SortingState,
     useReactTable
 } from "@tanstack/react-table";
-import DataTable from "../../general/DataTable.tsx";
+import DataTable from "../../shared/DataTable.tsx";
 
 interface ShopsTableProps {
     shops: Shop[];

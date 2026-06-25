@@ -1,6 +1,6 @@
 import {useState, FC, PropsWithChildren} from 'react';
-import SmartSidebar from './general/SmartSidebar.tsx';
-import MobileDock from "./general/MobileDock.tsx";
+import SmartSidebar from './SmartSidebar.tsx';
+import MobileDock from "./MobileDock.tsx";
 
 /**
  * MainLayout proporciona la estructura principal de la aplicación,

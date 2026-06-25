@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { FC, useState } from 'react';
 import { Ingredient } from '../../../types';
-import Modal from '../../general/Modal.tsx';
+import Modal from '../../shared/Modal.tsx';
 import { adjustIngredientStock } from '../../../services/shop/ingredientServices.ts';
 import { useAuthStore } from '../../../store/authStore.ts';
 import { useToast } from '../../../context/ToastContext';

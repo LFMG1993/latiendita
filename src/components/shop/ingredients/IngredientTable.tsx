@@ -1,6 +1,6 @@
 import {FC, useMemo, useState} from "react";
 import {Ingredient} from "../../../types";
-import ActionButtons from "../../general/ActionButtons";
+import ActionButtons from "../../shared/ActionButtons";
 import {
     createColumnHelper,
     getCoreRowModel,
@@ -10,7 +10,7 @@ import {
     SortingState,
     useReactTable,
 } from '@tanstack/react-table';
-import DataTable from "../../general/DataTable.tsx";
+import DataTable from "../../shared/DataTable.tsx";
 
 interface IngredientTableProps {
     ingredients: Ingredient[];

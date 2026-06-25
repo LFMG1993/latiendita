@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strings"
 
@@ -122,6 +123,7 @@ func (h *UserHandler) RegisterSaaS(w http.ResponseWriter, r *http.Request) {
 		} else if strings.Contains(err.Error(), "missing required") {
 			jsonError(w, err.Error(), http.StatusBadRequest)
 		} else {
+			log.Printf("Error in RegisterSaaS: %v", err)
 			jsonError(w, "Internal server error", http.StatusInternalServerError)
 		}
 		return

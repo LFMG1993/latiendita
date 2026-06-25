@@ -70,7 +70,7 @@ const CashSessionPage: FC = () => {
         setIsSubmitting(true);
         try {
             await startCashSession(shop.id, {
-                employeeId: user.uid,
+                employeeId: user.uid!,
                 employeeName: user.firstName || user.email,
                 openingBalance
             });
@@ -315,14 +315,8 @@ const CashSessionPage: FC = () => {
                     openingBalance={openSession?.openingBalance || 0}
                 />
             </Modal>
-<<<<<<< HEAD:src/pages/shop/CashSessionPage.tsx
-            <Modal title="Registrar Nueva Compra" show={isPurchaseModalOpen}
-                   onClose={() => setIsPurchaseModalOpen(false)} size="lg">
-                <AddPurchaseForm onFormSubmit={handlePurchaseFormSubmit} shopId={shop?.id!}/>
-=======
             <Modal title="Registrar Nueva Compra" show={isPurchaseModalOpen} onClose={() => setIsPurchaseModalOpen(false)} size="lg" headerIcon="🛒" headerColor="#0d6efd">
-                <AddPurchaseForm onFormSubmit={handlePurchaseFormSubmit} heladeriaId={shop?.id!}/>
->>>>>>> refs/remotes/origin/main:src/pages/admin/CashSessionPage.tsx
+                <AddPurchaseForm onFormSubmit={handlePurchaseFormSubmit} shopId={shop?.id!}/>
             </Modal>
             <Modal title="Registrar Gasto de Turno" show={isExpenseModalOpen} onClose={() => setIsExpenseModalOpen(false)} headerIcon="📋" headerColor="#f59e0b">
                 <ExpenseForm onSave={handleExpenseFormSubmit} isSubmitting={isSubmitting}/>
@@ -349,7 +343,7 @@ const CashSessionPage: FC = () => {
                                     {electronicSales.map(sale => (
                                         sale.payments.filter(p => p.type !== 'cash').map((pay, i) => (
                                             <tr key={`${sale.id}-${i}`}>
-                                                <td className="small text-muted">{sale.createdAt?.toDate().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</td>
+                                                <td className="small text-muted">{sale.createdAt ? new Date(sale.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''}</td>
                                                 <td className="fw-semibold">{sale.clientName || 'Cliente general'}</td>
                                                 <td><span className="badge rounded-pill" style={{background:'rgba(13,110,253,0.12)', color:'#0d6efd'}}>{pay.type}</span></td>
                                                 <td className="text-end fw-bold" style={{color:'#0d6efd'}}>{fmt(Number(pay.amount))}</td>

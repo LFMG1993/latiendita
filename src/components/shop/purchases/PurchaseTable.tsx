@@ -1,5 +1,5 @@
 import {FC, useMemo, useState} from 'react';
-import ActionButtons from "../../general/ActionButtons";
+import ActionButtons from "../../shared/ActionButtons";
 import {Purchase} from "../../../types";
 import {
     createColumnHelper,
@@ -10,8 +10,8 @@ import {
     SortingState,
     useReactTable
 } from "@tanstack/react-table";
-import DataTable from "../../general/DataTable.tsx";
-import Modal from "../../general/Modal.tsx";
+import DataTable from "../../shared/DataTable.tsx";
+import Modal from "../../shared/Modal.tsx";
 import {Eye, Calendar, Receipt, Person, Tag} from "react-bootstrap-icons";
 
 interface PurchaseTableProps {

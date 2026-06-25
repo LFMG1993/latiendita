@@ -1,6 +1,6 @@
 import {FC, useMemo} from "react";
 import {Sale, Ingredient} from "../../../types";
-import Modal from "../../general/Modal.tsx";
+import Modal from "../../shared/Modal.tsx";
 
 interface SaleDetailModalProps {
     sale: Sale | null;
@@ -21,7 +21,7 @@ const SaleDetailModal: FC<SaleDetailModalProps> = ({sale, ingredients, onClose})
     if (!sale) return null;
 
     return (
-        <Modal title={`Detalles de Venta - ${salnew Date(e.createdAt).toLocaleTimeString()}`} show={!!sale}
+        <Modal title={`Detalles de Venta - ${new Date(sale.createdAt).toLocaleTimeString()}`} show={!!sale}
                onClose={onClose} size="lg">
             <div className="row">
                 <div className="col-md-7">

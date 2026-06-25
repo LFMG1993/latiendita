@@ -1,17 +1,17 @@
-import { NewCashSessionData, CashSession, Purchase, Expense } from "../types";
+import { CashSession, NewCashSessionData, Expense, Purchase } from "../../types";
 import { getSalesByDateRange } from "./saleServices";
-import { apiClient } from "./apiClient";
+import { apiClient } from "../shared/apiClient";
 
 /**
  * Busca si hay una sesión de caja abierta actualmente en la heladería.
  */
 export const getOpenCashSession = async (shopId: string): Promise<CashSession | null> => {
     try {
-        const session = await apiClient<CashSession>(`/shops/${heladeriaId}/cash-sessions/open`);
+        const session = await apiClient<CashSession>(`/shops/${shopId}/cash-sessions/open`);
         // If the backend returns null/empty obj it means no session is open
         if (!session || !session.id) return null;
 
-        return mapSessionToFrontend(session);
+        return session;
     } catch {
         return null;
     }
@@ -43,15 +43,15 @@ export const closeCashSession = async (
     const sales = await getSalesByDateRange(shopId, new Date(session.startTime), new Date());
 
     // 2. Obtener las compras (gastos) realizadas por el empleado durante la sesión
-    const purchases = await apiClient<Purchase[]>(`/shops/${heladeriaId}/purchases`);
+    const purchases = await apiClient<Purchase[]>(`/shops/${shopId}/purchases`);
     const sessionPurchases = purchases.filter(p => {
         const pDate = new Date(p.createdAt as any);
-        return p.purchasedByEmployeeId === session.employeeId && pDate >= session.startTime.toDate();
+        return p.purchasedByEmployeeId === session.employeeId && pDate >= new Date(session.startTime);
     });
     const totalPurchaseExpenses = sessionPurchases.reduce((sum, exp) => sum + Number(exp.total), 0);
 
     // 2.1. OBTENER LOS GASTOS OPERATIVOS REGISTRADOS EN LA SESIÓN
-    const allExpenses = await apiClient<Expense[]>(`/shops/${heladeriaId}/expenses`);
+    const allExpenses = await apiClient<Expense[]>(`/shops/${shopId}/expenses`);
     const operationalExpenses = allExpenses.filter(e => e.sessionId === session.id);
     const totalOperationalExpenses = operationalExpenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
 

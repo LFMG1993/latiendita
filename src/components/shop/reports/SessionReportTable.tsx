@@ -9,7 +9,7 @@ import {
     SortingState,
     useReactTable
 } from "@tanstack/react-table";
-import DataTable from "../../general/DataTable.tsx";
+import DataTable from "../../shared/DataTable.tsx";
 
 interface SessionReportTableProps {
     sessions: CashSession[];

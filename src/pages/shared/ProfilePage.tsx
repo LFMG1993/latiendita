@@ -66,12 +66,12 @@ const ProfilePage: FC = () => {
 
             if (imageFile) {
                 // Usamos el UID del usuario como publicId para que siempre sobrescriba su propia foto
-                const publicId = user.uid;
+                const publicId = user.uid!;
                 const folder = 'user_profiles';
                 dataToUpdate.photoURL = await uploadImageToCloudinary(imageFile, folder, publicId);
             }
 
-            await updateUserProfile(user.uid, dataToUpdate);
+            await updateUserProfile(user.uid!, dataToUpdate);
 
             setSuccess('¡Perfil actualizado con éxito!');
             setIsEditing(false);

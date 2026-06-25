@@ -5,7 +5,7 @@ import {
     getAllProductRequests,
     approveProductRequest,
     rejectProductRequest,
-} from '../../services/masterProductService';
+} from '../../services/admin/masterProductService';
 import { useToast } from '../../context/ToastContext';
 
 const STATUS_TABS = [

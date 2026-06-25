@@ -31,7 +31,7 @@ const SessionPurchasesTable: FC<SessionPurchasesTableProps> = ({purchases}) => {
                         <tbody>
                         {purchases.map(purchase => (
                             <tr key={purchase.id}>
-                                <td>{purchasnew Date(e.createdAt).toLocaleTimeString()}</td>
+                                <td>{new Date(purchase.createdAt).toLocaleTimeString()}</td>
                                 <td>{purchase.supplierName}</td>
                                 <td>{formatCurrency(purchase.total)}</td>
                             </tr>

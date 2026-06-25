@@ -1,6 +1,6 @@
 import {FC, useState, useEffect} from "react";
 import {Product, Ingredient, IngredientUsage} from "../../../types";
-import Modal from "../../general/Modal";
+import Modal from "../../shared/Modal";
 
 interface VariableIngredientModalProps {
     show: boolean;

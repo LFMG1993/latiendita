@@ -14,7 +14,7 @@ import {useTheme} from '../../context/ThemeContext';
 import {createOrder} from '../../services/shop/orderService';
 import {getClientFinancials} from '../../services/shopPublic/clientService';
 import {NewOrderData} from '../../types/order.types';
-import {getAllMasterProducts, getMasterProductShops, enrollClientToShop, ShopProductStatus} from '../../services/masterProductService';
+import {getAllMasterProducts, getMasterProductShops, enrollClientToShop, ShopProductStatus} from '../../services/admin/masterProductService';
 import {useToast} from '../../context/ToastContext';
 
 // ID de la heladería principal. 
@@ -64,7 +64,7 @@ const ProductShowcaseContent: FC<{targetShopId: string | null, DEFAULT_SHOP_ID: 
         setSelectedMasterProduct(product);
         setLoadingShops(true);
         try {
-            const clientUid = user?.uid || user?.id;
+            const clientUid = user?.uid || user?.uid;
             const data = await getMasterProductShops(product.id, clientUid);
             setShopsForProduct(data);
         } catch (err: any) {
@@ -76,7 +76,7 @@ const ProductShowcaseContent: FC<{targetShopId: string | null, DEFAULT_SHOP_ID: 
     };
 
     const handleEnroll = async (shopId: string) => {
-        const clientUid = user?.uid || user?.id;
+        const clientUid = user?.uid || user?.uid;
         if (!isAuthenticated || !clientUid) {
             showToast("Debes iniciar sesión para inscribirte a una tienda", "warning");
             return;

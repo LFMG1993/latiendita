@@ -1,7 +1,7 @@
-import {FC, useMemo, useState} from 'react';
-import {ProductSalesReport, Sale, Ingredient} from '../../../types';
+import { FC, useMemo, useState } from 'react';
+import { ProductSalesReport, Sale, Ingredient } from '../../../types';
 import ReportSalesTable from './ReportSalesTable';
-import SaleDetailModal from '../../cash/SaleDetailModal';
+import SaleDetailModal from '../cash/SaleDetailModal';
 
 interface SalesReportProps {
     sales: Sale[];
@@ -9,7 +9,7 @@ interface SalesReportProps {
     loading: boolean;
 }
 
-const SalesReport: FC<SalesReportProps> = ({sales, ingredients, loading}) => {
+const SalesReport: FC<SalesReportProps> = ({ sales, ingredients, loading }) => {
     const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
 
     // --- Cálculos de Reportes con useMemo para eficiencia ---
@@ -83,7 +83,7 @@ const SalesReport: FC<SalesReportProps> = ({sales, ingredients, loading}) => {
             </div>
 
             <div className="mt-4">
-                <ReportSalesTable sales={sales} onViewDetails={setSelectedSale}/>
+                <ReportSalesTable sales={sales} onViewDetails={setSelectedSale} />
             </div>
 
             <SaleDetailModal

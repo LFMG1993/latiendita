@@ -2,7 +2,7 @@ import {useState, useEffect, FC, ChangeEvent, FormEvent} from 'react';
 import {useAuthStore} from '../../../store/authStore';
 import { updateShop } from "../../../services/shop/tenantUserServices";
 import { addShopToUser } from "../../../services/admin/adminShopServices";
-import Alert from '../../general/Alert';
+import Alert from '../../shared/Alert';
 import {uploadImageToCloudinary} from "../../../services/shared/cloudinaryService";
 import slugify from "../../../utils/slugify";
 import {countryCodes} from "../../../data/countryCodes";

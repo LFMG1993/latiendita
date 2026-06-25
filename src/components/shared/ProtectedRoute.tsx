@@ -1,9 +1,9 @@
-import {FC, ReactNode, useEffect} from "react";
-import {Navigate, useNavigate} from 'react-router-dom';
-import {useAuthStore} from '../store/authStore';
-import FullScreenLoader from "./general/FullScreenLoader";
-import {usePermissions} from "../hooks/usePermissions.ts";
-import {useToast} from "../context/ToastContext";
+import { FC, ReactNode, useEffect } from "react";
+import { Navigate, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
+import FullScreenLoader from "./FullScreenLoader";
+import { usePermissions } from "../../hooks/usePermissions.ts";
+import { useToast } from "../../context/ToastContext";
 
 /**
  * Componente de ruta protegida que redirige al login si el usuario no está autenticado.
@@ -14,11 +14,11 @@ interface ProtectedRouteProps {
     requiredPermission?: string; // Permiso opcional
 }
 
-const ProtectedRoute: FC<ProtectedRouteProps> = ({children, requiredPermission}) => {
-    const {isAuthenticated, user, loading} = useAuthStore();
-    const {hasPermission} = usePermissions();
+const ProtectedRoute: FC<ProtectedRouteProps> = ({ children, requiredPermission }) => {
+    const { isAuthenticated, user, loading } = useAuthStore();
+    const { hasPermission } = usePermissions();
     const navigate = useNavigate();
-    const {showToast} = useToast();
+    const { showToast } = useToast();
 
     useEffect(() => {
         // Se ejecuta después del renderizado inicial para evitar cambios de estado durante el render.
@@ -27,21 +27,21 @@ const ProtectedRoute: FC<ProtectedRouteProps> = ({children, requiredPermission})
             setTimeout(() => {
                 showToast('No tienes permiso para acceder a esta sección. Serás redirigido a tu página principal.', 'warning');
                 const redirectTo = user?.role === 'employee' ? '/cash-session' : '/dashboard';
-                navigate(redirectTo, {replace: true});
+                navigate(redirectTo, { replace: true });
             }, 100);
         }
     }, [loading, isAuthenticated, requiredPermission, hasPermission, navigate, user]);
 
     if (loading) {
-        return <FullScreenLoader/>;
+        return <FullScreenLoader />;
     }
     if (!isAuthenticated) {
-        return <Navigate to="/login" replace/>;
+        return <Navigate to="/login" replace />;
     }
 
     // Si se requiere un permiso y el usuario no lo tiene, muestra una página de acceso denegado.
     if (requiredPermission && !hasPermission(requiredPermission)) {
-        return <FullScreenLoader/>;
+        return <FullScreenLoader />;
     }
 
     return <>{children}</>;

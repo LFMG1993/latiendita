@@ -1,8 +1,8 @@
 import {FC, useEffect, useState} from 'react';
-import FullScreenLoader from "../../general/FullScreenLoader.tsx";
+import FullScreenLoader from "../../shared/FullScreenLoader.tsx";
 import {getSalesForPeriod, processSalesByDay} from '../../../services/shop/dashboardService';
 import {useAuthStore} from '../../../store/authStore';
-import ChartComponent from '../../general/Chart';
+import ChartComponent from '../../shared/Chart';
 import {ChartData} from 'chart.js';
 import {startOfMonth, endOfMonth} from 'date-fns';
 import {toDate} from 'date-fns-tz';

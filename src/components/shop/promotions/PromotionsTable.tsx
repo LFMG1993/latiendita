@@ -1,6 +1,6 @@
 import {FC, useMemo, useState} from "react";
 import {Promotion} from "../../../types";
-import ActionButtons from "../../general/ActionButtons";
+import ActionButtons from "../../shared/ActionButtons";
 import {usePermissions} from "../../../hooks/usePermissions";
 import {
     createColumnHelper,
@@ -11,7 +11,7 @@ import {
     SortingState,
     useReactTable
 } from "@tanstack/react-table";
-import DataTable from "../../general/DataTable.tsx";
+import DataTable from "../../shared/DataTable.tsx";
 
 interface PromotionsTableProps {
     promotions: Promotion[];

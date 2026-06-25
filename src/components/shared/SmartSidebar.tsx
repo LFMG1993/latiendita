@@ -5,14 +5,9 @@ import {navItemsConfig} from "../../config/navConfig.ts";
 import {useAuthStore} from "../../store/authStore.ts";
 import {getPendingInvitations} from "../../services/shop/teamServices.ts";
 import {InvitationData, Shop} from "../../types";
-import {Envelope, PersonCircle, Moon, Sun, List, Shop, ChevronDown, ChevronRight, 
-<<<<<<< HEAD:src/components/shared/SmartSidebar.tsx
-        CashStack, BoxSeam, GraphUp, GearFill} from "react-bootstrap-icons";
-import {logoutService} from "../../services/shared/logoutService.ts";
-=======
+import {Envelope, PersonCircle, Moon, Sun, List, Shop as ShopIcon, ChevronDown, ChevronRight, 
         CashStack, BoxSeam, GraphUp, GearFill, Tag, ClipboardCheck} from "react-bootstrap-icons";
-import {logoutService} from "../../services/logoutService.ts";
->>>>>>> refs/remotes/origin/main:src/components/general/SmartSidebar.tsx
+import {logoutService} from "../../services/shared/logoutService.ts";
 import {useTenant} from "../../context/TenantContext";
 import {useTheme} from "../../context/ThemeContext";
 import "../../style/SmartSidebar.css";
@@ -123,7 +118,7 @@ const SmartSidebar: FC<SmartSidebarProps> = ({isExpanded, setIsExpanded}) => {
                             <ul className={`nav-group-items ${collapsedGroups['saas'] ? 'collapsed' : ''}`}>
                                 <li className="nav-item">
                                     <NavLink className="nav-link position-relative text-warning text-opacity-75" to="/super-admin" end>
-                                        <Shop className="sidebar-icon text-warning text-opacity-75" size={20}/>
+                                        <ShopIcon className="sidebar-icon text-warning text-opacity-75" size={20}/>
                                         <span className="sidebar-text">Tiendas (SaaS)</span>
                                     </NavLink>
                                 </li>
@@ -202,69 +197,30 @@ const SmartSidebar: FC<SmartSidebarProps> = ({isExpanded, setIsExpanded}) => {
                             </li>
                         );
                     })}
-<<<<<<< HEAD:src/components/shared/SmartSidebar.tsx
 
-                    {/* Link especial para SuperAdministrador */}
-                    {user?.role === 'superAdmin' && (
-                        <li className="nav-group mt-3 border-top border-secondary-subtle pt-3">
-                            <button
-                                className="nav-group-header text-warning"
-                                onClick={() => toggleGroup('saas')}
-                            >
-                                <GearFill className="sidebar-icon text-warning" size={20} />
-                                <span className="sidebar-text fw-bold">Administración SaaS</span>
-                                <span className="sidebar-text ms-auto text-warning">
-                                    {collapsedGroups['saas'] ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-                                </span>
-                            </button>
-                            <ul className={`nav-group-items ${collapsedGroups['saas'] ? 'collapsed' : ''}`}>
-                                <li className="nav-item">
-                                    <NavLink className="nav-link position-relative text-warning text-opacity-75" to="/super-admin" end>
-                                        <Shop className="sidebar-icon text-warning text-opacity-75" size={20}/>
-                                        <span className="sidebar-text">Tiendas (SaaS)</span>
-                                    </NavLink>
-                                </li>
-                                <li className="nav-item">
-                                    <NavLink className="nav-link position-relative text-warning text-opacity-75" to="/super-admin/clients" end>
-                                        <PersonCircle className="sidebar-icon text-warning text-opacity-75" size={20}/>
-                                        <span className="sidebar-text">Clientes y Facturación</span>
-                                    </NavLink>
-                                </li>
-                            </ul>
-                        </li>
-                    )}
-
-                    {/* Acceso directo a Mi Menú Público (Solo si hay tienda activa) */}
-                    {activeShopId && (
-                         <li className="nav-item mt-3">
-                             <a 
-                                 href={`/catalogo?shopId=${activeShopId}`} 
-=======
-                    
                     {/* Acceso directo al Catálogo / Menú Público */}
                     {user?.role === 'superAdmin' ? (
                          <li className="nav-item mt-3">
                              <a 
                                  href="/catalogo?mode=master" 
->>>>>>> refs/remotes/origin/main:src/components/general/SmartSidebar.tsx
                                  target="_blank" 
                                  rel="noopener noreferrer"
                                  className="nav-link position-relative text-warning"
                              >
-                                 <Shop className="sidebar-icon text-warning" size={24}/>
+                                 <ShopIcon className="sidebar-icon text-warning" size={24}/>
                                  <span className="sidebar-text fw-bold">Ver Catálogo Completo</span>
                              </a>
                          </li>
                     ) : (
-                        activeIceCreamShopId && (
+                        activeShopId && (
                              <li className="nav-item mt-3">
                                  <a 
-                                     href={`/catalogo?shopId=${activeIceCreamShopId}`} 
+                                     href={`/catalogo?shopId=${activeShopId}`} 
                                      target="_blank" 
                                      rel="noopener noreferrer"
                                      className="nav-link position-relative"
                                  >
-                                     <Shop className="sidebar-icon" size={24}/>
+                                     <ShopIcon className="sidebar-icon" size={24}/>
                                      <span className="sidebar-text">Ver Mi Menú</span>
                                  </a>
                              </li>
@@ -304,7 +260,6 @@ const SmartSidebar: FC<SmartSidebarProps> = ({isExpanded, setIsExpanded}) => {
                     ) : (
                         <PersonCircle className="sidebar-icon" size={24}/>
                     )}
-                    {/* 2. Usamos la misma estructura para el texto animado */}
                     <div className="sidebar-text d-flex flex-column">
                         <strong className="lh-sm">{user?.firstName || 'Usuario'}</strong>
                         <small className="text-muted lh-sm">{activeShopName || 'Sin heladería'}</small>

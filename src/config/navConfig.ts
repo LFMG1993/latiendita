@@ -1,6 +1,6 @@
 import {FC} from "react";
 import {
-    Shop,
+    
     Basket3,
     Cart3,
     Truck,
@@ -43,7 +43,7 @@ export const navItemsConfig: NavItemConfig[] = [
     {to: "/expenses", Icon: Receipt, label: "Gastos", permissionId: 'expenses_view', category: 'finance'},
     {to: "/promotions", Icon: Megaphone, label: "Promociones", permissionId: 'promotions_view', category: 'finance'},
     
-    // {to: "/ice-cream-shop", Icon: Shop, label: "Heladerías", permissionId: 'shop_details_manage', category: 'settings'},
+    // {to: "/ice-cream-shop", Icon:  label: "Heladerías", permissionId: 'shop_details_manage', category: 'settings'},
     {to: "/team-management", Icon: PersonCheck, label: "Usuarios y Roles", permissionId: 'team_view', category: 'settings'},
     {to: "/settings", Icon: Gear, label: "Configuración", permissionId: 'shop_details_manage', category: 'settings'},
 ];

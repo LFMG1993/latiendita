@@ -1,37 +1,22 @@
 import {useState, useEffect, FC, useMemo, useRef} from "react";
 import {useAuthStore} from "../../store/authStore.ts";
-<<<<<<< HEAD:src/pages/shop/ProductsPage.tsx
 import FullScreenLoader from "../../components/shared/FullScreenLoader.tsx";
 import Breadcrumbs from "../../components/shared/Breadcrumbs.tsx";
-import {getProducts, deleteProduct, updateProduct} from "../../services/shop/productServices.ts";
+import {getProducts, deleteProduct, updateProduct, addProduct} from "../../services/shop/productServices.ts";
 import {Product, Ingredient, EnrichedProduct, Purchase, EnrichedIngredient} from "../../types";
 import Modal from "../../components/shared/Modal.tsx";
 import ProductForm from "../../components/shop/products/ProductForm.tsx";
 import ProductTable from "../../components/shop/products/ProductTable.tsx";
 import {getIngredients} from "../../services/shop/ingredientServices.ts";
 import {getPurchases} from "../../services/shop/purchaseServices.ts";
-
-const ProductsPage: FC = () => {
-    const {activeShopId: shopId, loading: authLoading} = useAuthStore();
-=======
-import FullScreenLoader from "../../components/general/FullScreenLoader.tsx";
-import Breadcrumbs from "../../components/general/Breadcrumbs.tsx";
-import {getProducts, deleteProduct, updateProduct, addProduct} from "../../services/productServices.ts";
-import {Product, Ingredient, EnrichedProduct, Purchase, EnrichedIngredient} from "../../types";
-import Modal from "../../components/general/Modal.tsx";
-import ProductForm from "../../components/products/ProductForm.tsx";
-import ProductTable from "../../components/products/ProductTable.tsx";
-import {getIngredients} from "../../services/ingredientServices.ts";
-import {getPurchases} from "../../services/purchaseServices.ts";
-import {searchMasterProducts, createProductRequest} from "../../services/masterProductService.ts";
+import {searchMasterProducts, createProductRequest} from "../../services/admin/masterProductService.ts";
 import {MasterProduct} from "../../types/masterProduct.types.ts";
 import {useToast} from "../../context/ToastContext.tsx";
 import {Search, Tag, Send, PlusCircle, ArrowLeft} from 'react-bootstrap-icons';
 
 const ProductsPage: FC = () => {
-    const {activeIceCreamShopId: heladeriaId, loading: authLoading} = useAuthStore();
+    const {activeShopId: shopId, loading: authLoading} = useAuthStore();
     const {showToast} = useToast();
->>>>>>> refs/remotes/origin/main:src/pages/admin/ProductsPage.tsx
     const [pageLoading, setPageLoading] = useState(true);
     const [products, setProducts] = useState<Product[]>([]);
     const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -66,9 +51,9 @@ const ProductsPage: FC = () => {
             try {
                 // Ahora cargamos productos, ingredientes y compras en paralelo
                 const [productsData, ingredientsData, purchasesData] = await Promise.all([
-                    getProducts(shopId),
-                    getIngredients(shopId),
-                    getPurchases(shopId)
+                    getProducts(shopId!),
+                    getIngredients(shopId!),
+                    getPurchases(shopId!)
                 ]);
                 setProducts(productsData);
                 setIngredients(ingredientsData);
@@ -95,7 +80,7 @@ const ProductsPage: FC = () => {
         const sortedPurchases = [...purchases].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
         sortedPurchases.forEach(purchase => {
             purchase.items.forEach(item => {
-                ingredientCostMap.set(item.ingredientId, item.unitCost);
+                ingredientCostMap.set(item.ingredientId!, item.unitCost);
             });
         });
 
@@ -161,7 +146,7 @@ const ProductsPage: FC = () => {
         const sortedPurchases = [...purchases].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
         sortedPurchases.forEach(purchase => {
             purchase.items.forEach(item => {
-                ingredientCostMap.set(item.ingredientId, item.unitCost);
+                ingredientCostMap.set(item.ingredientId!, item.unitCost);
             });
         });
 
@@ -242,7 +227,7 @@ const ProductsPage: FC = () => {
     };
 
     const handleAddProductFromCatalog = async () => {
-        if (!selectedMasterProduct || !heladeriaId) return;
+        if (!selectedMasterProduct || !shopId) return;
         const price = parseFloat(localPrice);
         if (isNaN(price) || price <= 0) {
             showToast('Ingresa un precio de venta válido', 'warning');
@@ -250,7 +235,7 @@ const ProductsPage: FC = () => {
         }
         setAddingProduct(true);
         try {
-            await addProduct(heladeriaId, {
+            await addProduct(shopId, {
                 master_product_id: selectedMasterProduct.id,
                 name: selectedMasterProduct.name,
                 category: selectedMasterProduct.category,
@@ -272,13 +257,13 @@ const ProductsPage: FC = () => {
     };
 
     const handleSubmitRequest = async () => {
-        if (!reqName.trim() || !heladeriaId) {
+        if (!reqName.trim() || !shopId) {
             showToast('El nombre del producto es obligatorio', 'warning');
             return;
         }
         setSubmittingReq(true);
         try {
-            await createProductRequest(heladeriaId, {
+            await createProductRequest(shopId, {
                 requested_name: reqName,
                 requested_brand: reqBrand || undefined,
                 requested_barcode: reqBarcode || undefined,
@@ -343,7 +328,7 @@ const ProductsPage: FC = () => {
                     productToEdit={editingProduct}
                     shopId={shopId}
                     availableIngredients={enrichedIngredientsForForm}
-                    lockStock={true}
+                    
                 />
             </Modal>
 

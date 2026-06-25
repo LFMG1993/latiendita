@@ -30,7 +30,7 @@ const SessionExpensesTable: FC<SessionExpensesTableProps> = ({expenses}) => {
                         <tbody>
                         {expenses.map(expense => (
                             <tr key={expense.id}>
-                                <td>{expensnew Date(e.createdAt).toLocaleTimeString()}</td>
+                                <td>{new Date(expense.createdAt).toLocaleTimeString()}</td>
                                 <td>{expense.description}</td>
                                 <td>{formatCurrency(expense.amount)}</td>
                             </tr>

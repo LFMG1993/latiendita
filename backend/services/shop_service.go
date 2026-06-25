@@ -112,3 +112,17 @@ func (s *ShopService) ApproveShop(shopID string) error {
 	}
 	return s.repo.Approve(shopID)
 }
+
+func (s *ShopService) GetShopsByClient(clientID string) ([]models.Shop, error) {
+	if clientID == "" {
+		return nil, errors.New("client_id is required")
+	}
+	return s.repo.FindShopsByClient(clientID)
+}
+
+func (s *ShopService) GetClientsByShop(shopID string) ([]map[string]interface{}, error) {
+	if shopID == "" {
+		return nil, errors.New("shop_id is required")
+	}
+	return s.repo.FindClientsByShop(shopID)
+}

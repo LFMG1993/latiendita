@@ -242,3 +242,81 @@ func (r *ShopRepository) scanShops(rows *sql.Rows) ([]models.Shop, error) {
 	}
 	return shops, nil
 }
+
+func (r *ShopRepository) FindShopsByClient(clientID string) ([]models.Shop, error) {
+	query := `
+		SELECT s.id, s.name, s.address, s.photo_url, s.whatsapp, s.owner_id, s.timezone, s.business_type_id,
+		       s.theme_primary_color, s.theme_secondary_color, s.theme_logo_url,
+		       s.terminology_shop_label, s.terminology_product_label,
+		       s.modules, s.features, s.status, s.created_at, s.updated_at
+		FROM shops s
+		JOIN client_shop_accounts csa ON csa.shop_id = s.id
+		WHERE csa.client_id = $1 AND s.status = 'active'
+		ORDER BY s.name ASC
+	`
+	rows, err := r.DB.Query(query, clientID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return r.scanShops(rows)
+}
+
+func (r *ShopRepository) FindClientsByShop(shopID string) ([]map[string]interface{}, error) {
+	query := `
+		SELECT u.id, u.first_name, u.last_name, u.email, u.phone, u.document_id, u.photo_url, u.created_at,
+		       csa.credits, csa.debt, csa.is_credit_enabled, csa.credit_limit
+		FROM users u
+		JOIN client_shop_accounts csa ON u.id = csa.client_id
+		WHERE csa.shop_id = $1
+		ORDER BY u.first_name, u.last_name
+	`
+
+	rows, err := r.DB.Query(query, shopID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	clients := []map[string]interface{}{}
+	for rows.Next() {
+		var id, firstName, lastName, email, phone string
+		var photoURL, documentID sql.NullString
+		var createdAt interface{} // Use interface{} or string/time.Time to match what is needed
+		var credits, debt float64
+		var isCreditEnabled bool
+		var creditLimit sql.NullFloat64
+
+		if err := rows.Scan(&id, &firstName, &lastName, &email, &phone, &documentID, &photoURL, &createdAt, &credits, &debt, &isCreditEnabled, &creditLimit); err != nil {
+			log.Printf("Error scanning client row: %v", err)
+			continue
+		}
+
+		client := map[string]interface{}{
+			"id":                id,
+			"uid":               id,
+			"first_name":        firstName,
+			"firstName":         firstName,
+			"last_name":         lastName,
+			"lastName":          lastName,
+			"email":             email,
+			"phone":             phone,
+			"document_id":       documentID.String,
+			"documentId":        documentID.String,
+			"photo_url":         photoURL.String,
+			"photoURL":          photoURL.String,
+			"created_at":        createdAt,
+			"createdAt":         createdAt, // Send timestamp directly
+			"credits":           credits,
+			"debt":              debt,
+			"isCreditEnabled":   isCreditEnabled,
+			"is_credit_enabled": isCreditEnabled,
+			"creditLimit":       creditLimit.Float64,
+			"credit_limit":      creditLimit.Float64,
+			"role":              "client",
+		}
+		clients = append(clients, client)
+	}
+	return clients, nil
+}

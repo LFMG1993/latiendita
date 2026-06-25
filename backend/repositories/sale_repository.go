@@ -147,3 +147,52 @@ func (r *SaleRepository) FindSaleByID(id string) (*models.Sale, error) {
 
 	return &sale, nil
 }
+
+func (r *SaleRepository) FindSalesByClient(clientID string) ([]models.Sale, error) {
+	query := `
+		SELECT id, shop_id, session_id, total, employee_id, employee_name, client_id, client_name, pending_debt, created_at
+		FROM sales WHERE client_id = $1 ORDER BY created_at DESC LIMIT 500
+	`
+	rows, err := r.DB.Query(query, clientID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var sales []models.Sale
+	for rows.Next() {
+		var s models.Sale
+		if err := rows.Scan(&s.ID, &s.ShopID, &s.SessionID, &s.Total, &s.EmployeeID, &s.EmployeeName, &s.ClientID, &s.ClientName, &s.PendingDebt, &s.CreatedAt); err != nil {
+			log.Printf("Error scanning sale row: %v", err)
+			continue
+		}
+
+		// Load items
+		itemRows, err := r.DB.Query(`SELECT id, sale_id, product_id, product_name, quantity, unit_price, is_promotion, promotion_id FROM sale_items WHERE sale_id = $1`, s.ID)
+		if err == nil {
+			for itemRows.Next() {
+				var item models.SaleItem
+				if err := itemRows.Scan(&item.ID, &item.SaleID, &item.ProductID, &item.ProductName, &item.Quantity, &item.UnitPrice, &item.IsPromotion, &item.PromotionID); err == nil {
+					s.Items = append(s.Items, item)
+				}
+			}
+			itemRows.Close()
+		}
+
+		// Load payments
+		payRows, err := r.DB.Query(`SELECT id, sale_id, method_id, method_name, amount, type FROM sale_payments WHERE sale_id = $1`, s.ID)
+		if err == nil {
+			for payRows.Next() {
+				var pay models.SalePayment
+				if err := payRows.Scan(&pay.ID, &pay.SaleID, &pay.MethodID, &pay.MethodName, &pay.Amount, &pay.Type); err == nil {
+					s.Payments = append(s.Payments, pay)
+				}
+			}
+			payRows.Close()
+		}
+
+		sales = append(sales, s)
+	}
+
+	return sales, nil
+}

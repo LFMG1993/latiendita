@@ -1,11 +1,11 @@
-import { apiClient } from './apiClient';
+import { apiClient } from '../shared/apiClient';
 import {
     MasterProduct,
     MasterProductRequest,
     CreateMasterProductPayload,
     CreateProductRequestPayload,
     ApproveProductRequestPayload,
-} from '../types/masterProduct.types';
+} from '../../types/masterProduct.types';
 
 // ---- SUPER ADMIN: Master Catalog ----
 

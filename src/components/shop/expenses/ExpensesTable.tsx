@@ -1,8 +1,8 @@
 import {FC, useMemo, useState} from 'react';
 import {Expense} from "../../../types";
 import {createColumnHelper, useReactTable, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, SortingState} from "@tanstack/react-table";
-import DataTable from "../../general/DataTable.tsx";
-import ActionButtons from "../../general/ActionButtons.tsx";
+import DataTable from "../../shared/DataTable.tsx";
+import ActionButtons from "../../shared/ActionButtons.tsx";
 
 interface ExpensesTableProps {
     expenses: Expense[];

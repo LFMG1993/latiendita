@@ -1,8 +1,8 @@
-import {FC, useState, useEffect, FormEvent, useMemo} from 'react';
-import {NewProductData, RecipeItem, EnrichedIngredient, Product, UpdateProductData} from "../../../types";
-import {addProduct, updateProduct} from "../../../services/shop/productServices.ts";
-import {Trash} from "react-bootstrap-icons";
-import "../../style/ProductForm.css";
+import { FC, useState, useEffect, FormEvent, useMemo } from 'react';
+import { NewProductData, RecipeItem, EnrichedIngredient, Product, UpdateProductData } from "../../../types";
+import { addProduct, updateProduct } from "../../../services/shop/productServices.ts";
+import { Trash } from "react-bootstrap-icons";
+import "../../../style/ProductForm.css";
 
 interface ProductFormProps {
     shopId: string;
@@ -11,7 +11,7 @@ interface ProductFormProps {
     availableIngredients: EnrichedIngredient[];
 }
 
-const ProductForm: FC<ProductFormProps> = ({shopId, onFormSubmit, productToEdit, availableIngredients}) => {
+const ProductForm: FC<ProductFormProps> = ({ shopId, onFormSubmit, productToEdit, availableIngredients }) => {
     const [name, setName] = useState('');
     const [price, setPrice] = useState(0);
     const [category, setCategory] = useState('');
@@ -47,7 +47,7 @@ const ProductForm: FC<ProductFormProps> = ({shopId, onFormSubmit, productToEdit,
 
     // --- Manejadores de la Receta Dinámica ---
     const handleAddRecipeItem = () => {
-        setRecipe([...recipe, {ingredientId: '', quantity: 0}]);
+        setRecipe([...recipe, { ingredientId: '', quantity: 0 }]);
     };
 
     const handleRemoveRecipeItem = (index: number) => {
@@ -58,7 +58,7 @@ const ProductForm: FC<ProductFormProps> = ({shopId, onFormSubmit, productToEdit,
     const handleRecipeChange = (index: number, field: keyof RecipeItem, value: string | number) => {
         const newRecipe = recipe.map((item, i) => {
             if (i === index) {
-                return {...item, [field]: value};
+                return { ...item, [field]: value };
             }
             return item;
         });
@@ -119,7 +119,7 @@ const ProductForm: FC<ProductFormProps> = ({shopId, onFormSubmit, productToEdit,
                 <div className="col-md-12 mb-3">
                     <label htmlFor="productName" className="form-label fw-semibold">Nombre del Producto</label>
                     <input type="text" id="productName" className="form-control" value={name}
-                           onChange={(e) => setName(e.target.value)} required/>
+                        onChange={(e) => setName(e.target.value)} required />
                 </div>
             </div>
 
@@ -127,16 +127,16 @@ const ProductForm: FC<ProductFormProps> = ({shopId, onFormSubmit, productToEdit,
                 <div className="col-md-4">
                     <label htmlFor="price" className="form-label fw-semibold">Precio de Venta</label>
                     <input type="number" id="price" className="form-control" value={price}
-                           onChange={(e) => setPrice(Number(e.target.value))} required/>
+                        onChange={(e) => setPrice(Number(e.target.value))} required />
                 </div>
                 <div className="col-md-8">
                     <label htmlFor="category" className="form-label fw-semibold">Categoría</label>
                     <input type="text" id="category" className="form-control" value={category}
-                           onChange={(e) => setCategory(e.target.value)} placeholder="Ej: Bebidas, Postres"/>
+                        onChange={(e) => setCategory(e.target.value)} placeholder="Ej: Bebidas, Postres" />
                 </div>
             </div>
 
-            <hr className="my-4"/>
+            <hr className="my-4" />
 
             <div className="mb-3 form-check recipe-checkbox-container">
                 <input
@@ -202,8 +202,8 @@ const ProductForm: FC<ProductFormProps> = ({shopId, onFormSubmit, productToEdit,
                             </div>
                             <div className="col-md-2">
                                 <button type="button" className="btn btn-outline-danger w-100"
-                                        onClick={() => handleRemoveRecipeItem(index)}>
-                                    <Trash/>
+                                    onClick={() => handleRemoveRecipeItem(index)}>
+                                    <Trash />
                                 </button>
                             </div>
                         </div>

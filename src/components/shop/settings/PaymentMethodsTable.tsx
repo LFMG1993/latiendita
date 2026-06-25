@@ -1,6 +1,6 @@
 import {FC} from "react";
 import {PaymentMethod} from "../../../types";
-import ActionButtons from "../../general/ActionButtons.tsx";
+import ActionButtons from "../../shared/ActionButtons.tsx";
 
 interface PaymentMethodsTableProps {
     methods: PaymentMethod[];

@@ -1,7 +1,7 @@
 import {FC, useState, FormEvent} from 'react';
 import {Role, InvitationData} from "../../../types";
 import {inviteMember} from "../../../services/shop/teamServices";
-import CopyButton from "../../general/CopyButton";
+import CopyButton from "../../shared/CopyButton";
 
 interface InviteMemberFormProps {
     shopId: string;

@@ -32,7 +32,7 @@ const SessionSalesTable: FC<SessionSalesTableProps> = ({sales, onViewDetails}) =
                         <tbody>
                         {sales.map(sale => (
                             <tr key={sale.id}>
-                                <td>{salnew Date(e.createdAt).toLocaleTimeString()}</td>
+                                <td>{new Date(sale.createdAt).toLocaleTimeString()}</td>
                                 <td>{formatCurrency(sale.total)}</td>
                                 <td>{sale.items.reduce((sum, item) => sum + item.quantity, 0)}</td>
                                 <td>

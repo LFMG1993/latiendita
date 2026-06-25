@@ -1,7 +1,7 @@
 import {FC, useState, useEffect} from "react";
 import {PaymentMethod, SalePayment} from "../../../types";
 import {UserProfile} from "../../../types/user.types";
-import Modal from "../../general/Modal";
+import Modal from "../../shared/Modal";
 import {Trash, PersonFill, CreditCard, Cash, Coin, Search, XCircle, PlusCircle} from "react-bootstrap-icons";
 import { createQuickClient, QuickClientData } from "../../../services/shop/customerServices";
 import {useToast} from "../../../context/ToastContext";

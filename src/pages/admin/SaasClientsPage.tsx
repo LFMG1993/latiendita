@@ -1,4 +1,4 @@
-import React, { FC, useEffect, useState } from 'react';
+import { FC, useEffect, useState } from 'react';
 import { UserProfile } from '../../types';
 import { getAllOwners } from "../../services/admin/adminUserServices";
 import { SaasClientDetailsModal } from '../../components/admin/SaasClientDetailsModal';
@@ -70,7 +70,7 @@ export const SaasClientsPage: FC = () => {
                                 </thead>
                                 <tbody>
                                     {clients.map(client => (
-                                        <tr key={client.id} onClick={() => handleViewDetails(client)} style={{cursor: 'pointer'}}>
+                                        <tr key={client.uid} onClick={() => handleViewDetails(client)} style={{cursor: 'pointer'}}>
                                             <td>
                                                 <div className="d-flex align-items-center">
                                                     <div className="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center me-3" style={{width: '40px', height: '40px', fontWeight: 'bold'}}>
@@ -78,7 +78,7 @@ export const SaasClientsPage: FC = () => {
                                                     </div>
                                                     <div>
                                                         <div className="fw-bold">{client.firstName || 'Usuario'} {client.lastName || ''}</div>
-                                                        <div className="small text-muted">ID: {client.id ? client.id.substring(0,8) : 'N/A'}...</div>
+                                                        <div className="small text-muted">ID: {client.uid ? client.uid.substring(0,8) : 'N/A'}...</div>
                                                     </div>
                                                 </div>
                                             </td>

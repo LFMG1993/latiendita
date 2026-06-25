@@ -38,3 +38,10 @@ func (s *SaleService) GetSaleDetails(id string) (*models.Sale, error) {
 	}
 	return s.repo.FindSaleByID(id)
 }
+
+func (s *SaleService) GetClientSales(clientID string) ([]models.Sale, error) {
+	if clientID == "" {
+		return nil, errors.New("client_id is required")
+	}
+	return s.repo.FindSalesByClient(clientID)
+}
